@@ -43,8 +43,13 @@ void BackpropToolsBenchmark::Run()
 
 	uint32_t start, end;
 	perf_begin(_loop_perf);
+	int iterations = 10000;
+	auto input_sample = lic::row(device, input::container, 0);
+	auto output_sample = lic::row(device, output, 0);
 	start = hrt_absolute_time();
-	lic::evaluate(device, mlp_1::mlp, input::container, output, buffers);
+	for(int iteration_i = 0; iteration_i < iterations; iteration_i++){
+		lic::evaluate(device, mlp_1::mlp, input_sample, output_sample, buffers);
+	}
 	end = hrt_absolute_time();
 	perf_end(_loop_perf);
 	PX4_INFO("backprop_tools_benchmark: %dus", (int)(end- start));

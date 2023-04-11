@@ -2,6 +2,7 @@
 
 #include <layer_in_c/operations/arm.h>
 #include <layer_in_c/nn/layers/dense/operations_arm/opt.h>
+#include <layer_in_c/nn/layers/dense/operations_arm/dsp.h>
 #include <layer_in_c/nn_models/mlp/operations_generic.h>
 #include <test_layer_in_c_nn_models_mlp_persist_code.h>
 #include <test_layer_in_c_nn_models_mlp_evaluation.h>
@@ -53,13 +54,14 @@ private:
 	perf_counter_t	_loop_perf{perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")};
 	perf_counter_t	_loop_interval_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": interval")};
 
-	using DEVICE = layer_in_c::devices::DefaultARM;
+	using DEV_SPEC = layer_in_c::devices::DefaultARMSpecification;
+	using DEVICE = layer_in_c::devices::arm::DSP<DEV_SPEC>;
 	DEVICE device;
 	using TI = typename mlp_1::SPEC::TI;
 	using DTYPE = typename mlp_1::SPEC::T;
 	static constexpr TI BATCH_SIZE = decltype(input::container)::ROWS;
 
 	uint32_t init_time;
-	decltype(mlp_1::mlp)::template Buffers<BATCH_SIZE> buffers;// = {buffer_tick, buffer_tock};
+	decltype(mlp_1::mlp)::template Buffers<1> buffers;// = {buffer_tick, buffer_tock};
 	lic::MatrixDynamic<lic::matrix::Specification<DTYPE, TI, BATCH_SIZE, mlp_1::SPEC::OUTPUT_DIM, lic::matrix::layouts::RowMajorAlignment<TI, 1>>> output;
 };
