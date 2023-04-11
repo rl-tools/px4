@@ -44,18 +44,18 @@ void BackpropToolsBenchmark::Run()
 	uint32_t start, end;
 	perf_begin(_loop_perf);
 	start = hrt_absolute_time();
-	lic::evaluate(device, mlp_1::mlp, input::matrix, output, buffers);
+	lic::evaluate(device, mlp_1::mlp, input::container, output, buffers);
 	end = hrt_absolute_time();
 	perf_end(_loop_perf);
 	PX4_INFO("backprop_tools_benchmark: %dus", (int)(end- start));
 	// for(TI batch_i = 0; batch_i < BATCH_SIZE; batch_i++){
 	// 	for(TI input_i = 0; input_i < mlp_1::SPEC::INPUT_DIM; input_i++){
-	// 		PX4_INFO("input[%d][%d]: %f", batch_i, input_i, get(input::matrix, batch_i, input_i));
+	// 		PX4_INFO("input[%d][%d]: %f", batch_i, input_i, get(input::container, batch_i, input_i));
 	// 	}
 	// }
 	for(TI batch_i = 0; batch_i < BATCH_SIZE; batch_i++){
 		for(TI output_i = 0; output_i < mlp_1::SPEC::OUTPUT_DIM; output_i++){
-			PX4_INFO("output[%d][%d]: %f (diff %f)", batch_i, output_i, get(output, batch_i, output_i), lic::get(output, batch_i, output_i) - lic::get(expected_output::matrix, batch_i, output_i));
+			PX4_INFO("output[%d][%d]: %f (diff %f)", batch_i, output_i, get(output, batch_i, output_i), lic::get(output, batch_i, output_i) - lic::get(expected_output::container, batch_i, output_i));
 		}
 	}
 	PX4_INFO("evaluation time: %dus", (int)(end - start));

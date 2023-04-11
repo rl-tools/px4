@@ -1,7 +1,7 @@
 #pragma once
 
 #include <layer_in_c/operations/arm.h>
-#include <layer_in_c/nn/layers/dense/operations_arm.h>
+#include <layer_in_c/nn/layers/dense/operations_arm/opt.h>
 #include <layer_in_c/nn_models/mlp/operations_generic.h>
 #include <test_layer_in_c_nn_models_mlp_persist_code.h>
 #include <test_layer_in_c_nn_models_mlp_evaluation.h>
@@ -57,9 +57,9 @@ private:
 	DEVICE device;
 	using TI = typename mlp_1::SPEC::TI;
 	using DTYPE = typename mlp_1::SPEC::T;
-	static constexpr TI BATCH_SIZE = decltype(input::matrix)::ROWS;
+	static constexpr TI BATCH_SIZE = decltype(input::container)::ROWS;
 
 	uint32_t init_time;
 	decltype(mlp_1::mlp)::template Buffers<BATCH_SIZE> buffers;// = {buffer_tick, buffer_tock};
-	lic::Matrix<lic::matrix::Specification<DTYPE, TI, BATCH_SIZE, mlp_1::SPEC::OUTPUT_DIM, lic::matrix::layouts::RowMajorAlignment<TI, 1>>> output;
+	lic::MatrixDynamic<lic::matrix::Specification<DTYPE, TI, BATCH_SIZE, mlp_1::SPEC::OUTPUT_DIM, lic::matrix::layouts::RowMajorAlignment<TI, 1>>> output;
 };
