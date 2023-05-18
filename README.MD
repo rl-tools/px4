@@ -14,7 +14,7 @@ Main CMakeList:
 
 Build with (after changing the path to wherever this repository is located)::
 ```
-make mro_pixracerpro_default EXTERNAL_MODULES_LOCATION=/home/jonas/phd/projects/rl_for_control/px4/external_modules
+make mro_pixracerpro_default EXTERNAL_MODULES_LOCATION=/path/to/this/repository/external_modules
 ```
 Flash with:
 ```
