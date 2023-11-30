@@ -7,3 +7,6 @@
 [submodule "external_modules/src/modules/backprop_tools_benchmark/CMSIS-DSP"]
 	path = external_modules/src/modules/backprop_tools_benchmark/CMSIS-DSP
 	url = https://github.com/ARM-software/CMSIS-DSP.git
+[submodule "px4_autopilot"]
+	path = px4_autopilot
+	url = https://github.com/PX4/PX4-Autopilot.git
