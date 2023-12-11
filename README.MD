@@ -14,7 +14,7 @@ Main CMakeList:
 
 Build with (after changing the path to wherever this repository is located)::
 ```
-make mro_pixracerpro_default EXTERNAL_MODULES_LOCATION=/path/to/this/repository/external_modules
+make mro_pixracerpro_default EXTERNAL_MODULES_LOCATION=/home/jonas/rl_tools/embedded_platforms/px4/external_modules RL_TOOLS_ROOT=/home/jonas/rl_tools -j8
 ```
 Flash with:
 ```
@@ -24,5 +24,5 @@ make mro_pixracerpro_default upload
 
 Usage:
 - Go into the QGroundControl console
-- Start module: `backprop_tools_benchmark start`
+- Start module: `rl_tools_benchmark start`
 - Watch printed output: `dmesg`

@@ -4,16 +4,16 @@ RLtoolsBenchmark::RLtoolsBenchmark() :
 	ModuleParams(nullptr),
 	ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::test1)
 {
-	lic::malloc(device, buffers);
-	lic::malloc(device, output);
+	rlt::malloc(device, buffers);
+	rlt::malloc(device, output);
 }
 
 RLtoolsBenchmark::~RLtoolsBenchmark()
 {
 	perf_free(_loop_perf);
 	perf_free(_loop_interval_perf);
-	lic::free(device, buffers);
-	lic::free(device, output);
+	rlt::free(device, buffers);
+	rlt::free(device, output);
 }
 
 bool RLtoolsBenchmark::init()
@@ -34,33 +34,34 @@ void RLtoolsBenchmark::Run()
 
 	perf_count(_loop_interval_perf);
 
-	// DTYPE buffer_tick_memory[mlp_1::SPEC::HIDDEN_DIM];
-	// DTYPE buffer_tock_memory[mlp_1::SPEC::HIDDEN_DIM];
-	// lic::Matrix<lic::matrix::Specification<DTYPE, TI, 1, mlp_1::SPEC::HIDDEN_DIM, mlp_1::SPEC::MEMORY_LAYOUT>> buffer_tick = {(DTYPE*)buffer_tick_memory};
-	// lic::Matrix<lic::matrix::Specification<DTYPE, TI, 1, mlp_1::SPEC::HIDDEN_DIM, mlp_1::SPEC::MEMORY_LAYOUT>> buffer_tock = {(DTYPE*)buffer_tock_memory};
+	// T buffer_tick_memory[mlp_1::SPEC::HIDDEN_DIM];
+	// T buffer_tock_memory[mlp_1::SPEC::HIDDEN_DIM];
+	// rlt::Matrix<rlt::matrix::Specification<T, TI, 1, mlp_1::SPEC::HIDDEN_DIM, mlp_1::SPEC::MEMORY_LAYOUT>> buffer_tick = {(T*)buffer_tick_memory};
+	// rlt::Matrix<rlt::matrix::Specification<T, TI, 1, mlp_1::SPEC::HIDDEN_DIM, mlp_1::SPEC::MEMORY_LAYOUT>> buffer_tock = {(T*)buffer_tock_memory};
 
 
 
 	uint32_t start, end;
 	perf_begin(_loop_perf);
 	int iterations = 10000;
-	auto input_sample = lic::row(device, input::container, 0);
-	auto output_sample = lic::row(device, output, 0);
+	auto input_sample = rlt::row(device, rl_tools_export::input::container, 0);
+	auto output_sample = rlt::row(device, output, 0);
 	start = hrt_absolute_time();
 	for(int iteration_i = 0; iteration_i < iterations; iteration_i++){
-		lic::evaluate(device, mlp_1::mlp, input_sample, output_sample, buffers);
+		rlt::evaluate(device, rl_tools_export::model::model, input_sample, output_sample, buffers);
 	}
 	end = hrt_absolute_time();
 	perf_end(_loop_perf);
-	PX4_INFO("backprop_tools_benchmark: %dus", (int)(end- start));
+	T inference_frequency = (T)iterations/((T)(end - start)/1e6);
+	PX4_INFO("rl_tools_benchmark: %dHz", (int)(inference_frequency));
 	// for(TI batch_i = 0; batch_i < BATCH_SIZE; batch_i++){
 	// 	for(TI input_i = 0; input_i < mlp_1::SPEC::INPUT_DIM; input_i++){
 	// 		PX4_INFO("input[%d][%d]: %f", batch_i, input_i, get(input::container, batch_i, input_i));
 	// 	}
 	// }
 	for(TI batch_i = 0; batch_i < BATCH_SIZE; batch_i++){
-		for(TI output_i = 0; output_i < mlp_1::SPEC::OUTPUT_DIM; output_i++){
-			PX4_INFO("output[%d][%d]: %f (diff %f)", batch_i, output_i, get(output, batch_i, output_i), lic::get(output, batch_i, output_i) - lic::get(expected_output::container, batch_i, output_i));
+		for(TI output_i = 0; output_i < rl_tools_export::model::MODEL::OUTPUT_DIM; output_i++){
+			PX4_INFO("output[%d][%d]: %f (diff %f)", batch_i, output_i, get(output, batch_i, output_i), rlt::get(output, batch_i, output_i) - rlt::get(rl_tools_export::output::container, batch_i, output_i));
 		}
 	}
 	PX4_INFO("evaluation time: %dus", (int)(end - start));
@@ -114,14 +115,14 @@ RLtools Benchmark
 
 )DESCR_STR");
 
-	PRINT_MODULE_USAGE_NAME("backprop_tools_benchmark", "template");
+	PRINT_MODULE_USAGE_NAME("rl_tools_benchmark", "template");
 	PRINT_MODULE_USAGE_COMMAND("start");
 	PRINT_MODULE_USAGE_DEFAULT_COMMANDS();
 
 	return 0;
 }
 
-extern "C" __EXPORT int backprop_tools_benchmark_main(int argc, char *argv[])
+extern "C" __EXPORT int rl_tools_benchmark_main(int argc, char *argv[])
 {
 	return RLtoolsBenchmark::main(argc, argv);
 }

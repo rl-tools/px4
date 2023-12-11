@@ -1,13 +1,12 @@
 #pragma once
 
-#include <layer_in_c/operations/arm.h>
-#include <layer_in_c/nn/layers/dense/operations_arm/opt.h>
-#include <layer_in_c/nn/layers/dense/operations_arm/dsp.h>
-#include <layer_in_c/nn_models/mlp/operations_generic.h>
-#include <test_layer_in_c_nn_models_mlp_persist_code.h>
-#include <test_layer_in_c_nn_models_mlp_evaluation.h>
+#include <rl_tools/operations/arm.h>
+#include <rl_tools/nn/layers/dense/operations_arm/opt.h>
+#include <rl_tools/nn/layers/dense/operations_arm/dsp.h>
+#include <rl_tools/nn_models/sequential/operations_generic.h>
+#include "model.h"
 
-namespace lic = layer_in_c;
+namespace rlt = rl_tools;
 
 
 #include <px4_platform_common/defines.h>
@@ -54,14 +53,16 @@ private:
 	perf_counter_t	_loop_perf{perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")};
 	perf_counter_t	_loop_interval_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": interval")};
 
-	using DEV_SPEC = layer_in_c::devices::DefaultARMSpecification;
-	using DEVICE = layer_in_c::devices::arm::DSP<DEV_SPEC>;
+	using DEV_SPEC = rl_tools::devices::DefaultARMSpecification;
+	// using DEVICE = rl_tools::devices::arm::DSP<DEV_SPEC>;
+	using DEVICE = rl_tools::devices::arm::OPT<DEV_SPEC>;
 	DEVICE device;
-	using TI = typename mlp_1::SPEC::TI;
-	using DTYPE = typename mlp_1::SPEC::T;
-	static constexpr TI BATCH_SIZE = decltype(input::container)::ROWS;
+	using TI = typename rl_tools_export::model::MODEL::CONTENT::SPEC::TI;
+	using T = typename rl_tools_export::model::MODEL::CONTENT::SPEC::T;
+	static constexpr TI BATCH_SIZE = decltype(rl_tools_export::input::container)::ROWS;
 
+	static_assert(BATCH_SIZE == 1);
 	uint32_t init_time;
-	decltype(mlp_1::mlp)::template Buffers<1> buffers;// = {buffer_tick, buffer_tock};
-	lic::MatrixDynamic<lic::matrix::Specification<DTYPE, TI, BATCH_SIZE, mlp_1::SPEC::OUTPUT_DIM, lic::matrix::layouts::RowMajorAlignment<TI, 1>>> output;
+	rl_tools_export::model::MODEL::template DoubleBuffer<BATCH_SIZE> buffers;// = {buffer_tick, buffer_tock};
+	rlt::MatrixDynamic<rlt::matrix::Specification<T, TI, BATCH_SIZE, rl_tools_export::model::MODEL::OUTPUT_DIM, rlt::matrix::layouts::RowMajorAlignment<TI, 1>>> output;
 };
