@@ -2,4 +2,4 @@ menuconfig MODULES_BACKPROP_TOOLS_BENCHMARK
 	bool "backprop_tools_benchmark"
 	default n
 	---help---
-		Enable support for BackpropTools Benchmark
+		Enable support for RLtools Benchmark

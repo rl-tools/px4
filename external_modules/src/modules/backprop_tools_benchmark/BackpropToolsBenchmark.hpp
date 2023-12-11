@@ -28,11 +28,11 @@ namespace lic = layer_in_c;
 
 using namespace time_literals;
 
-class BackpropToolsBenchmark : public ModuleBase<BackpropToolsBenchmark>, public ModuleParams, public px4::ScheduledWorkItem
+class RLtoolsBenchmark : public ModuleBase<RLtoolsBenchmark>, public ModuleParams, public px4::ScheduledWorkItem
 {
 public:
-	BackpropToolsBenchmark();
-	~BackpropToolsBenchmark() override;
+	RLtoolsBenchmark();
+	~RLtoolsBenchmark() override;
 
 	/** @see ModuleBase */
 	static int task_spawn(int argc, char *argv[]);

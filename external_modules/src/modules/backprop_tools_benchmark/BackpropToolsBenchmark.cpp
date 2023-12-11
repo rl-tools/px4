@@ -1,6 +1,6 @@
-#include "BackpropToolsBenchmark.hpp"
+#include "RLtoolsBenchmark.hpp"
 
-BackpropToolsBenchmark::BackpropToolsBenchmark() :
+RLtoolsBenchmark::RLtoolsBenchmark() :
 	ModuleParams(nullptr),
 	ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::test1)
 {
@@ -8,7 +8,7 @@ BackpropToolsBenchmark::BackpropToolsBenchmark() :
 	lic::malloc(device, output);
 }
 
-BackpropToolsBenchmark::~BackpropToolsBenchmark()
+RLtoolsBenchmark::~RLtoolsBenchmark()
 {
 	perf_free(_loop_perf);
 	perf_free(_loop_interval_perf);
@@ -16,7 +16,7 @@ BackpropToolsBenchmark::~BackpropToolsBenchmark()
 	lic::free(device, output);
 }
 
-bool BackpropToolsBenchmark::init()
+bool RLtoolsBenchmark::init()
 {
 	ScheduleOnInterval(1000000_us); // 2000 us interval, 200 Hz rate
 	this->init_time = hrt_absolute_time();
@@ -24,7 +24,7 @@ bool BackpropToolsBenchmark::init()
 	return true;
 }
 
-void BackpropToolsBenchmark::Run()
+void RLtoolsBenchmark::Run()
 {
 	if (should_exit()) {
 		ScheduleClear();
@@ -66,9 +66,9 @@ void BackpropToolsBenchmark::Run()
 	PX4_INFO("evaluation time: %dus", (int)(end - start));
 }
 
-int BackpropToolsBenchmark::task_spawn(int argc, char *argv[])
+int RLtoolsBenchmark::task_spawn(int argc, char *argv[])
 {
-	BackpropToolsBenchmark *instance = new BackpropToolsBenchmark();
+	RLtoolsBenchmark *instance = new RLtoolsBenchmark();
 
 	if (instance) {
 		_object.store(instance);
@@ -89,19 +89,19 @@ int BackpropToolsBenchmark::task_spawn(int argc, char *argv[])
 	return PX4_ERROR;
 }
 
-int BackpropToolsBenchmark::print_status()
+int RLtoolsBenchmark::print_status()
 {
 	perf_print_counter(_loop_perf);
 	perf_print_counter(_loop_interval_perf);
 	return 0;
 }
 
-int BackpropToolsBenchmark::custom_command(int argc, char *argv[])
+int RLtoolsBenchmark::custom_command(int argc, char *argv[])
 {
 	return print_usage("unknown command");
 }
 
-int BackpropToolsBenchmark::print_usage(const char *reason)
+int RLtoolsBenchmark::print_usage(const char *reason)
 {
 	if (reason) {
 		PX4_WARN("%s\n", reason);
@@ -110,7 +110,7 @@ int BackpropToolsBenchmark::print_usage(const char *reason)
 	PRINT_MODULE_DESCRIPTION(
 		R"DESCR_STR(
 ### Description
-BackpropTools Benchmark
+RLtools Benchmark
 
 )DESCR_STR");
 
@@ -123,5 +123,5 @@ BackpropTools Benchmark
 
 extern "C" __EXPORT int backprop_tools_benchmark_main(int argc, char *argv[])
 {
-	return BackpropToolsBenchmark::main(argc, argv);
+	return RLtoolsBenchmark::main(argc, argv);
 }

@@ -25,7 +25,7 @@ px4_add_module(
 	COMPILE_FLAGS
 		-DARM_MATH_LOOPUNROLL
 	SRCS
-		BackpropToolsBenchmark.cpp
+		RLtoolsBenchmark.cpp
 	# DEPENDS
 	# 	px4_work_queue
 	EXTERNAL
