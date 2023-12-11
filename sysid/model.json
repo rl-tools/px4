@@ -1,0 +1,75 @@
+{
+    "display_options": {
+    "displayActions": false,
+    "displayGlobalCoordinateSystem": false,
+    "displayIMUCoordinateSystem": false
+    },
+    "id": "default",
+    "model": {
+    "gravity": [ 0, 0, -9.81 ],
+    "imu": {
+        "pose": {
+        "orientation": [
+            [ 1, 0, 0 ],
+            [ 0, 1, 0 ],
+            [ 0, 0, 1 ]
+        ],
+        "position": [ 0, 0, 0 ]
+        }
+    },
+    "mass": 0.027000000700354576,
+    "rotors": [
+        {
+        "pose": {
+            "orientation": [
+            [ 1, 0, 0 ],
+            [ 0, 1, 0 ],
+            [ 0, 0, 1 ]
+            ],
+            "position": [0.02800000086426735, -0.02800000086426735, 0]
+        },
+        "thrust_curve": {
+            "factor_1": 1
+        }
+        },
+        {
+        "pose": {
+            "orientation": [
+            [ 1, 0, 0 ],
+            [ 0, 1, 0 ],
+            [ 0, 0, 1 ]
+            ],
+            "position": [-0.02800000086426735, -0.02800000086426735, 0]
+        },
+        "thrust_curve": {
+            "factor_1": 1
+        }
+        },
+        {
+        "pose": {
+            "orientation": [
+            [ 1, 0, 0 ],
+            [ 0, 1, 0 ],
+            [ 0, 0, 1 ]
+            ],
+            "position": [-0.02800000086426735, 0.02800000086426735, 0]
+        },
+        "thrust_curve": {
+            "factor_1": 1
+        }
+        },
+        {
+        "pose": {
+            "orientation": [
+            [ 1, 0, 0 ],
+            [ 0, 1, 0 ],
+            [ 0, 0, 1 ]
+            ],
+            "position": [0.02800000086426735, 0.02800000086426735, 0]
+        },
+        "thrust_curve": {
+            "factor_1": 1
+        }}
+    ]},
+    "origin": [0, 0, 0]
+}

@@ -1,4 +1,4 @@
-# BackpropTools: PX4 Module
+# RLtools: PX4 Module
 
 This example aims at the `Pixracer Pro` which is a `Pixhawk 6C` compliant hardware implementation.
 
