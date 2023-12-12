@@ -1,5 +1,0 @@
-menuconfig MODULES_BACKPROP_TOOLS_BENCHMARK
-	bool "rl_tools_benchmark"
-	default n
-	---help---
-		Enable support for RLtools Benchmark
