@@ -47,14 +47,12 @@ void ActuatorMotorsMultiplexer::Run()
 			last_rc_update_time_set = true;
 			last_rc_update_time = current_time;
 			next_use_original_controller = manual_control_input.aux1 < 0.5f;
-			PX4_INFO("manual_control_input.aux1: %f", (double)manual_control_input.aux1);
 		}
 	}
 
-
 	constexpr uint32_t RL_TOOLS_CONTROLLER_TIMEOUT = 100*1000; // 100ms timeout
-	constexpr uint32_t RC_TRIGGER_TIMEOUT = 200*1000; // 200ms timeout
-	next_use_original_controller = next_use_original_controller || !last_rl_tools_output_time_set || !last_rc_update_time_set;
+	constexpr uint32_t RC_TRIGGER_TIMEOUT = 2000*1000; // 200ms timeout
+	// next_use_original_controller = next_use_original_controller || !last_rl_tools_output_time_set || !last_rc_update_time_set;
 	if(last_rc_update_time_set && ((current_time - last_rc_update_time) > RC_TRIGGER_TIMEOUT)){
 		next_use_original_controller = true;
 	}
