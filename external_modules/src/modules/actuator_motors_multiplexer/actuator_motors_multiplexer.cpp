@@ -1,6 +1,10 @@
 #include "actuator_motors_multiplexer.hpp"
 
 ActuatorMotorsMultiplexer::ActuatorMotorsMultiplexer() : ModuleParams(nullptr), ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::rate_ctrl) {
+	last_rl_tools_output_time_set = false;
+	last_rc_update_time_set = false;
+	use_original_controller = true;
+
 	_actuator_motors_mux_pub.advertise();
 }
 
@@ -138,7 +142,7 @@ int ActuatorMotorsMultiplexer::print_usage(const char *reason)
 	PRINT_MODULE_DESCRIPTION(
 		R"DESCR_STR(
 ### Description
-RLtools Benchmark
+RLtools Multiplexer
 
 )DESCR_STR");
 

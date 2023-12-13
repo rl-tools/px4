@@ -1,6 +1,6 @@
 #include "RLtoolsPolicy.hpp"
 
-RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::test1){
+RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::rate_ctrl){
 	rlt::malloc(device, buffers);
 	rlt::malloc(device, input);
 	rlt::malloc(device, output);
@@ -14,10 +14,13 @@ RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_
 	timestamp_last_angular_velocity_set = false;
 	timestamp_last_local_position_set = false;
 	timestamp_last_attitude_set = false;
+	timestamp_last_command_set = false;
 
 	// controller state
 	timestamp_last_forward_pass_set = false;
 	controller_tick = 0;
+
+	_actuator_motors_rl_tools_pub.advertise();
 }
 
 RLtoolsPolicy::~RLtoolsPolicy()
@@ -76,9 +79,9 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation){
     float qx = +_vehicle_attitude.q[1];
     float qy = -_vehicle_attitude.q[2];
     float qz = -_vehicle_attitude.q[3];
-    rlt::set(observation, 0,  0 + 0, +_vehicle_local_position.x);
-    rlt::set(observation, 0,  0 + 1, -_vehicle_local_position.y);
-    rlt::set(observation, 0,  0 + 2, -_vehicle_local_position.z);
+    rlt::set(observation, 0,  0 + 0, +(_vehicle_local_position.x - _rl_tools_command.target_position[0]));
+    rlt::set(observation, 0,  0 + 1, -(_vehicle_local_position.y - _rl_tools_command.target_position[1]));
+    rlt::set(observation, 0,  0 + 2, -(_vehicle_local_position.z - _rl_tools_command.target_position[2]));
     rlt::set(observation, 0,  3 + 0, (1 - 2*qy*qy - 2*qz*qz));
     rlt::set(observation, 0,  3 + 1, (    2*qx*qy - 2*qw*qz));
     rlt::set(observation, 0,  3 + 2, (    2*qx*qz + 2*qw*qy));
@@ -125,6 +128,9 @@ void RLtoolsPolicy::rl_tools_control(TI substep){
 void RLtoolsPolicy::Run()
 {
 	if (should_exit()) {
+		_vehicle_angular_velocity_sub.unregisterCallback();
+		_vehicle_attitude_sub.unregisterCallback();
+		_vehicle_local_position_sub.unregisterCallback();
 		ScheduleClear();
 		exit_and_cleanup();
 		return;
@@ -146,21 +152,29 @@ void RLtoolsPolicy::Run()
 		timestamp_last_attitude = current_time;
 		timestamp_last_attitude_set = true;
 	}
+	if(_rl_tools_command_sub.update(&_rl_tools_command)){
+		timestamp_last_command = current_time;
+		timestamp_last_command_set = true;
+	}
 
-	if(!timestamp_last_angular_velocity_set || !timestamp_last_local_position_set || !timestamp_last_attitude_set){
+	if(!timestamp_last_angular_velocity_set || !timestamp_last_local_position_set || !timestamp_last_attitude_set || !timestamp_last_command_set){
 		return;
 	}
 
-	if((current_time - timestamp_last_angular_velocity) > OBSERVATION_TIMEOUT){
+	if((current_time - timestamp_last_angular_velocity) > OBSERVATION_TIMEOUT_ANGULAR_VELOCITY){
 		PX4_ERR("angular velocity timeout");
 		return;
 	}
-	if((current_time - timestamp_last_local_position) > OBSERVATION_TIMEOUT){
+	if((current_time - timestamp_last_local_position) > OBSERVATION_TIMEOUT_POSITION){
 		PX4_ERR("local position timeout");
 		return;
 	}
-	if((current_time - timestamp_last_attitude) > OBSERVATION_TIMEOUT){
+	if((current_time - timestamp_last_attitude) > OBSERVATION_TIMEOUT_ATTITUDE){
 		PX4_ERR("attitude timeout");
+		return;
+	}
+	if((current_time - timestamp_last_command) > COMMAND_TIMEOUT){
+		PX4_ERR("command timeout");
 		return;
 	}
 
@@ -234,7 +248,7 @@ int RLtoolsPolicy::print_usage(const char *reason)
 	PRINT_MODULE_DESCRIPTION(
 		R"DESCR_STR(
 ### Description
-RLtools Benchmark
+RLtools Policy
 
 )DESCR_STR");
 

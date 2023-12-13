@@ -26,6 +26,7 @@ namespace rlt = RL_TOOLS_NAMESPACE_WRAPPER ::rl_tools;
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_angular_velocity.h>
 #include <uORB/topics/actuator_motors.h>
+#include <uORB/topics/rl_tools_command.h>
 
 using namespace time_literals;
 
@@ -53,7 +54,10 @@ private:
 	using TI = typename rl_tools::checkpoint::actor::MODEL::CONTENT::SPEC::TI;
 	using T = typename rl_tools::checkpoint::actor::MODEL::CONTENT::SPEC::T;
 	// node constants
-	static constexpr TI OBSERVATION_TIMEOUT = 10 * 1000;
+	static constexpr TI OBSERVATION_TIMEOUT_ANGULAR_VELOCITY = 10 * 1000;
+	static constexpr TI OBSERVATION_TIMEOUT_POSITION = 100 * 1000;
+	static constexpr TI OBSERVATION_TIMEOUT_ATTITUDE = 50 * 1000;
+	static constexpr TI COMMAND_TIMEOUT = 100 * 1000;
 
 	void Run() override;
 
@@ -61,10 +65,12 @@ private:
 	vehicle_local_position_s _vehicle_local_position{};
 	vehicle_angular_velocity_s _vehicle_angular_velocity{};
 	vehicle_attitude_s _vehicle_attitude{};
-	uint32_t timestamp_last_local_position, timestamp_last_angular_velocity, timestamp_last_attitude;
-	bool timestamp_last_local_position_set = false, timestamp_last_angular_velocity_set = false, timestamp_last_attitude_set = false;
+	rl_tools_command_s _rl_tools_command{};
+	uint32_t timestamp_last_local_position, timestamp_last_angular_velocity, timestamp_last_attitude, timestamp_last_command;
+	bool timestamp_last_local_position_set = false, timestamp_last_angular_velocity_set = false, timestamp_last_attitude_set = false, timestamp_last_command_set = false;
 
 	
+	uORB::Subscription _rl_tools_command_sub{ORB_ID(rl_tools_command)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_local_position_sub{this, ORB_ID(vehicle_local_position)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_angular_velocity_sub{this, ORB_ID(vehicle_angular_velocity)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_sub{this, ORB_ID(vehicle_attitude)};

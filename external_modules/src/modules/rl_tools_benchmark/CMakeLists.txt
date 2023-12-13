@@ -1,6 +1,3 @@
-# add_subdirectory(CMSIS-DSP)
-message("REAL cmake")
-
 if(NOT DEFINED RL_TOOLS_ROOT)
   message(FATAL_ERROR "RL_TOOLS_ROOT is not defined")
 endif()

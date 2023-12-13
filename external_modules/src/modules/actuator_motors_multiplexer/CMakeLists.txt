@@ -1,6 +1,3 @@
-# add_subdirectory(CMSIS-DSP)
-message("REAL cmake")
-
 include(px4_add_library)
 
 px4_add_module(
