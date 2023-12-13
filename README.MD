@@ -1,6 +1,6 @@
 # RLtools: PX4 Module
 
-This example aims at the `Pixracer Pro` which is a `Pixhawk 6C` compliant hardware implementation.
+This example aims at the `Pixracer Pro` which is a `Pixhawk 6C` compliant hardware implementation (have a look at `./px4_autopilot` for the changes to the mro/pixracerpro board definition and compilation config).
 
 Using the following commit of the PX4 firmware: `7f251d093568179209fa724d155ef0301c3657cf`
 
