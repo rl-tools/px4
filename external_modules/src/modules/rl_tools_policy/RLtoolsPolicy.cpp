@@ -31,8 +31,20 @@ RLtoolsPolicy::~RLtoolsPolicy()
 
 bool RLtoolsPolicy::init()
 {
-	ScheduleOnInterval(500_us); // 2000 us interval, 200 Hz rate
 	this->init_time = hrt_absolute_time();
+	ScheduleOnInterval(500_us); // 2000 us interval, 200 Hz rate
+	if (!_vehicle_local_position_sub.registerCallback()) {
+		PX4_ERR("vehicle_local_position_sub callback registration failed");
+		return false;
+	}
+	if (!_vehicle_angular_velocity_sub.registerCallback()) {
+		PX4_ERR("vehicle_angular_velocity_sub callback registration failed");
+		return false;
+	}
+	if (!_vehicle_attitude_sub.registerCallback()) {
+		PX4_ERR("vehicle_attitude_sub callback registration failed");
+		return false;
+	}
 
 	auto input_sample = rlt::row(device, rl_tools::checkpoint::observation::container, 0);
 	auto output_sample = rlt::row(device, output, 0);
