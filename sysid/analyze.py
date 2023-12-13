@@ -35,12 +35,10 @@ def state_message(position, orientation):
 with open("sysid/model.json", "r") as f:
     model = json.load(f)
 
-# logfile = "sysid/logs_csv/log_149_2023-11-30-14-11-24.ulg"
-# logfile = "sysid/logs_csv/log_147_2023-11-30-14-02-32.ulg"
-# logfile = "sysid/logs_csv/log_161_2023-12-12-21-48-20.ulg"
-# logfile = "sysid/logs_csv/log_162_2023-12-12-22-02-56.ulg"
-logfile_input = "sysid/logs/log_164_UnknownDate.ulg"
-subprocess.run(["ulog2csv", logfile_input, "-o", f"sysid/logs_csv/{os.path.split(logfile_input)[-1]}"])
+logfile_input = "sysid/logs/log_5_2023-12-13-12-30-06.ulg"
+retval = subprocess.run(["ulog2csv", logfile_input, "-o", f"sysid/logs_csv/{os.path.split(logfile_input)[-1]}"])
+assert(retval.returncode == 0)
+
 logfile = os.path.join("sysid", "logs_csv", os.path.split(logfile_input)[-1])
 
 
@@ -59,8 +57,10 @@ for file in os.listdir(logfile):
             identifier = identifier.group(1)
 
         df = pd.read_csv(file_path)
-        df.columns = [f"{identifier}_{col}" if col != 'timestamp' else col for col in df.columns]
-        dfs[identifier] = df
+        if "timestamp_sample" in df.columns:
+            df.columns = [f"{identifier}_{col}" if col != 'timestamp_sample' else col for col in df.columns]
+            df.rename(columns={f"timestamp_sample": "timestamp"}, inplace=True)
+            dfs[identifier] = df
 
 merged_df = pd.DataFrame()
 for df in dfs.values():
@@ -74,7 +74,7 @@ merged_df["timestamp"] = (merged_df["timestamp"] - merged_df.loc[0]["timestamp"]
 
 col_frequencies = [merged_df[col].isna().mean() for col in merged_df.columns]
 for col, frequency in sorted(list(zip(merged_df.columns, col_frequencies)), key=lambda x: x[1]):
-    if "motor" in col:
+    if "timestamp_sample" in col:
         print(f"{col}: {frequency}")
 
 thrust_setpoint = merged_df[["timestamp", "vehicle_rates_setpoint_thrust_body[2]"]].dropna()
@@ -93,10 +93,16 @@ time_start = 0
 time_end = 100000
 merged_timeframe = merged_df[(merged_df["timestamp"] > time_start) & (merged_df["timestamp"] < time_end)]
 vehicle_acceleration = merged_timeframe.rename(columns={
-    "sensor_combined_accelerometer_m_s2[0]": "x",
-    "sensor_combined_accelerometer_m_s2[1]": "y",
-    "sensor_combined_accelerometer_m_s2[2]": "z"
+    "vehicle_acceleration_xyz[0]": "x",
+    "vehicle_acceleration_xyz[1]": "y",
+    "vehicle_acceleration_xyz[2]": "z",
 })[["timestamp", "x", "y", "z"]].dropna()
+vehicle_attitude = merged_timeframe.rename(columns={
+    "vehicle_attitude_q[0]": "0",
+    "vehicle_attitude_q[1]": "1",
+    "vehicle_attitude_q[2]": "2",
+    "vehicle_attitude_q[3]": "3",
+})[["timestamp", "0", "1", "2", "3"]].dropna()
 actuator_controls = merged_timeframe.rename(columns={
     "actuator_motors_control[0]": "0",
     "actuator_motors_control[1]": "1",
@@ -115,16 +121,35 @@ for axis in ["x", "y", "z"]:
 for motor in ["0", "1", "2", "3"]:
     actuator_controls[motor] = scipy.signal.filtfilt(b, a, actuator_controls[motor])
 
+plt.plot(vehicle_acceleration['timestamp'], vehicle_acceleration["x"], label="acc_x")
+plt.plot(vehicle_acceleration['timestamp'], vehicle_acceleration["y"], label="acc_y")
 plt.plot(vehicle_acceleration['timestamp'], vehicle_acceleration["z"], label="acc_z")
+plt.legend()
+plt.show()
+plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["x"], label="w_x")
+plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["y"], label="w_y")
+plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["z"], label="w_z")
+plt.legend()
+plt.show()
 plt.plot(actuator_controls['timestamp'], actuator_controls["0"], label="m_0")
 plt.plot(actuator_controls['timestamp'], actuator_controls["1"], label="m_1")
 plt.plot(actuator_controls['timestamp'], actuator_controls["2"], label="m_2")
 plt.plot(actuator_controls['timestamp'], actuator_controls["3"], label="m_3")
-# plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["x"], label="gyro_x")
 plt.legend()
 plt.show()
+plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["0"], label="q_0")
+plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["1"], label="q_1")
+plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["2"], label="q_2")
+plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["3"], label="q_3")
+plt.legend()
+plt.show()
+# plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["x"], label="gyro_x")
 
 
+actuator_controls.describe()
+vehicle_attitude.describe()
+vehicle_acceleration.describe()
+vehicle_angular_rate.describe()
 
 
 
