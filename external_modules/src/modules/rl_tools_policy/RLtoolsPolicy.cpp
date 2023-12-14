@@ -126,7 +126,6 @@ void RLtoolsPolicy::rl_tools_control(TI substep){
         value /= substep + 1;
         action_history[ACTION_HISTORY_LENGTH - 1][action_i] = value;
     }
-    controller_tick++;
 }
 
 void RLtoolsPolicy::Run()
@@ -161,7 +160,12 @@ void RLtoolsPolicy::Run()
 		timestamp_last_command_set = true;
 	}
 
-	if(!timestamp_last_angular_velocity_set || !timestamp_last_local_position_set || !timestamp_last_attitude_set || !timestamp_last_command_set){
+	if(_manual_control_input_sub.update(&_manual_control_input)) {
+		timestamp_last_manual_control_input_set = true;
+		timestamp_last_manual_control_input = current_time;
+	}
+
+	if(!timestamp_last_angular_velocity_set || !timestamp_last_local_position_set || !timestamp_last_attitude_set || !timestamp_last_command_set || (SCALE_OUTPUT_WITH_THROTTLE && !timestamp_last_manual_control_input_set)){
 		return;
 	}
 
@@ -193,6 +197,15 @@ void RLtoolsPolicy::Run()
 		}
 		return;
 	}
+	if(SCALE_OUTPUT_WITH_THROTTLE && ((current_time - timestamp_last_manual_control_input) > MANUAL_CONTROL_TIMEOUT)){
+		if(!timeout_message_sent){
+			PX4_ERR("manual control input timeout");
+			timeout_message_sent = true;
+		}
+		return;
+	}
+
+
 	timeout_message_sent = false;
 
 	if(timestamp_last_forward_pass_set){
@@ -209,9 +222,14 @@ void RLtoolsPolicy::Run()
 	timestamp_last_forward_pass_set = true;
 
 	actuator_motors_s actuator_motors;
+	actuator_motors.timestamp_sample = hrt_absolute_time();
 	for(TI action_i=0; action_i < actuator_motors_s::NUM_CONTROLS; action_i++){
 		if(action_i < rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM){
-			actuator_motors.control[action_i] = rlt::get(output, 0, action_i);
+			T value = rlt::get(output, 0, action_i);
+			value = (value + 1) / 2;
+			T scaled_value = value * (SCALE_OUTPUT_WITH_THROTTLE ? (_manual_control_input.throttle + 1)/2 : 0.5);
+			scaled_value *= 0.9;
+			actuator_motors.control[action_i] = scaled_value + 0.1;
 		}
 		else{
 			actuator_motors.control[action_i] = NAN;

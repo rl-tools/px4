@@ -35,7 +35,7 @@ def state_message(position, orientation):
 with open("sysid/model.json", "r") as f:
     model = json.load(f)
 
-logfile_input = "sysid/logs/log_5_2023-12-13-12-30-06.ulg"
+logfile_input = "sysid/logs/log_41_2023-12-13-20-35-20.ulg"
 retval = subprocess.run(["ulog2csv", logfile_input, "-o", f"sysid/logs_csv/{os.path.split(logfile_input)[-1]}"])
 assert(retval.returncode == 0)
 
@@ -77,16 +77,6 @@ for col, frequency in sorted(list(zip(merged_df.columns, col_frequencies)), key=
     if "timestamp_sample" in col:
         print(f"{col}: {frequency}")
 
-thrust_setpoint = merged_df[["timestamp", "vehicle_rates_setpoint_thrust_body[2]"]].dropna()
-actuator_motors = merged_df[["timestamp", "actuator_motors_control[0]"]].dropna()
-dt = vehicle_acceleration["timestamp"].diff()
-plt.plot(vehicle_acceleration['timestamp'], dt)
-plt.plot(vehicle_acceleration['timestamp'], vehicle_acceleration["sensor_combined_accelerometer_m_s2[2]"])
-plt.plot(thrust_setpoint['timestamp'], thrust_setpoint["vehicle_rates_setpoint_thrust_body[2]"])
-plt.plot(actuator_motors['timestamp'], actuator_motors["actuator_motors_control[0]"])
-plt.show()
-
-# low-pass filter the acceleration
 import scipy.signal
 b, a = scipy.signal.butter(4, 0.50)
 time_start = 0
@@ -103,11 +93,17 @@ vehicle_attitude = merged_timeframe.rename(columns={
     "vehicle_attitude_q[2]": "2",
     "vehicle_attitude_q[3]": "3",
 })[["timestamp", "0", "1", "2", "3"]].dropna()
-actuator_controls = merged_timeframe.rename(columns={
+actuator_controls_orig = merged_timeframe.rename(columns={
     "actuator_motors_control[0]": "0",
     "actuator_motors_control[1]": "1",
     "actuator_motors_control[2]": "2",
     "actuator_motors_control[3]": "3",
+})[["timestamp", "0", "1", "2", "3"]].dropna()
+actuator_controls_policy = merged_timeframe.rename(columns={
+    "actuator_motors_rl_tools_control[0]": "0",
+    "actuator_motors_rl_tools_control[1]": "1",
+    "actuator_motors_rl_tools_control[2]": "2",
+    "actuator_motors_rl_tools_control[3]": "3",
 })[["timestamp", "0", "1", "2", "3"]].dropna()
 vehicle_angular_rate = merged_timeframe.rename(columns={
     "vehicle_angular_velocity_xyz[0]": "x",
@@ -131,10 +127,16 @@ plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["y"], label="w_
 plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["z"], label="w_z")
 plt.legend()
 plt.show()
-plt.plot(actuator_controls['timestamp'], actuator_controls["0"], label="m_0")
-plt.plot(actuator_controls['timestamp'], actuator_controls["1"], label="m_1")
-plt.plot(actuator_controls['timestamp'], actuator_controls["2"], label="m_2")
-plt.plot(actuator_controls['timestamp'], actuator_controls["3"], label="m_3")
+plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["0"], label="m_0")
+plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["1"], label="m_1")
+plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["2"], label="m_2")
+plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["3"], label="m_3")
+plt.legend()
+plt.show()
+plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["0"], label="m_0")
+plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["1"], label="m_1")
+plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["2"], label="m_2")
+plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["3"], label="m_3")
 plt.legend()
 plt.show()
 plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["0"], label="q_0")
