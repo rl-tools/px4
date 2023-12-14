@@ -38,12 +38,13 @@ public:
 
 private:
 	void Run() override;
-	uint32_t init_time, last_rl_tools_output_time, last_rc_update_time;
-	bool last_rl_tools_output_time_set = false, last_rc_update_time_set = false;
 	uORB::Subscription _manual_control_input_sub{ORB_ID(manual_control_input)};
 	uORB::SubscriptionCallbackWorkItem _actuator_motors_sub{this, ORB_ID(actuator_motors)};
 	uORB::SubscriptionCallbackWorkItem _actuator_motors_rl_tools_sub{this, ORB_ID(actuator_motors_rl_tools)};
 	uORB::Publication<actuator_motors_s> _actuator_motors_mux_pub{ORB_ID(actuator_motors_mux)};
+
+	uint32_t init_time, last_rl_tools_output_time, last_rc_update_time;
+	bool last_rl_tools_output_time_set = false, last_rc_update_time_set = false;
 	bool use_original_controller = true;
 
 	// Performance (perf) counters
