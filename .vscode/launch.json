@@ -14,13 +14,17 @@
             "cwd": "${workspaceFolder}/sysid"
         },
         {
-            "name": "Forward Pose Mavlink",
+            "name": "tools/external_position_reference/forward_ros_to_mavlink",
             "type": "python",
             "request": "launch",
             "program": "forward_ros_to_mavlink.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "cwd": "${workspaceFolder}/tools/external_position_reference"
+            "cwd": "${workspaceFolder}/tools/external_position_reference",
+            "env":{
+                "MAVLINK_POSE_TOPIC": "/vicon/race6/pose",
+                "MAVLINK_URL": "tcp:localhost:5760"
+            }
         }
     ]
 }
