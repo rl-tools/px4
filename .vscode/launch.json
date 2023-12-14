@@ -12,6 +12,15 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "cwd": "${workspaceFolder}/sysid"
+        },
+        {
+            "name": "Forward Pose Mavlink",
+            "type": "python",
+            "request": "launch",
+            "program": "forward_ros_to_mavlink.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/tools/external_position_reference"
         }
     ]
 }
