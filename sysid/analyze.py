@@ -7,6 +7,9 @@ import re
 import pandas as pd
 import matplotlib.pyplot as plt
 import subprocess
+import numpy as np
+from matplotlib.animation import FuncAnimation
+from sklearn.linear_model import LinearRegression
 
 def state_message(position, orientation):
     example_state = {
@@ -35,7 +38,7 @@ def state_message(position, orientation):
 with open("sysid/model.json", "r") as f:
     model = json.load(f)
 
-logfile_input = "sysid/logs/log_41_2023-12-13-20-35-20.ulg"
+logfile_input = "sysid/logs/log_45_2023-12-13-21-07-46.ulg"
 retval = subprocess.run(["ulog2csv", logfile_input, "-o", f"sysid/logs_csv/{os.path.split(logfile_input)[-1]}"])
 assert(retval.returncode == 0)
 
@@ -79,81 +82,137 @@ for col, frequency in sorted(list(zip(merged_df.columns, col_frequencies)), key=
 
 import scipy.signal
 b, a = scipy.signal.butter(4, 0.50)
-time_start = 0
-time_end = 100000
-merged_timeframe = merged_df[(merged_df["timestamp"] > time_start) & (merged_df["timestamp"] < time_end)]
-vehicle_acceleration = merged_timeframe.rename(columns={
-    "vehicle_acceleration_xyz[0]": "x",
-    "vehicle_acceleration_xyz[1]": "y",
-    "vehicle_acceleration_xyz[2]": "z",
-})[["timestamp", "x", "y", "z"]].dropna()
-vehicle_attitude = merged_timeframe.rename(columns={
-    "vehicle_attitude_q[0]": "0",
-    "vehicle_attitude_q[1]": "1",
-    "vehicle_attitude_q[2]": "2",
-    "vehicle_attitude_q[3]": "3",
-})[["timestamp", "0", "1", "2", "3"]].dropna()
-actuator_controls_orig = merged_timeframe.rename(columns={
-    "actuator_motors_control[0]": "0",
-    "actuator_motors_control[1]": "1",
-    "actuator_motors_control[2]": "2",
-    "actuator_motors_control[3]": "3",
-})[["timestamp", "0", "1", "2", "3"]].dropna()
-actuator_controls_policy = merged_timeframe.rename(columns={
-    "actuator_motors_rl_tools_control[0]": "0",
-    "actuator_motors_rl_tools_control[1]": "1",
-    "actuator_motors_rl_tools_control[2]": "2",
-    "actuator_motors_rl_tools_control[3]": "3",
-})[["timestamp", "0", "1", "2", "3"]].dropna()
-vehicle_angular_rate = merged_timeframe.rename(columns={
-    "vehicle_angular_velocity_xyz[0]": "x",
-    "vehicle_angular_velocity_xyz[1]": "y",
-    "vehicle_angular_velocity_xyz[2]": "z",
-})[["timestamp", "x", "y", "z"]].dropna()
-for axis in ["x", "y", "z"]:
-    vehicle_acceleration[axis] = scipy.signal.filtfilt(b, a, vehicle_acceleration[axis])
-    # vehicle_acceleration[axis] = vehicle_acceleration[axis] - vehicle_acceleration[axis].mean()
-    # vehicle_acceleration[axis] = vehicle_acceleration[axis] / vehicle_acceleration[axis].std()
-for motor in ["0", "1", "2", "3"]:
-    actuator_controls[motor] = scipy.signal.filtfilt(b, a, actuator_controls[motor])
+time_start = 1
+time_end = 10
+merged_timeframe = merged_df[(merged_df["timestamp"] > time_start) & (merged_df["timestamp"] < time_end)].copy()
+merged_timeframe.rename(columns={
+    "vehicle_acceleration_xyz[0]": "acc_x",
+    "vehicle_acceleration_xyz[1]": "acc_y",
+    "vehicle_acceleration_xyz[2]": "acc_z",
+}, inplace=True)
+vehicle_acceleration = merged_timeframe[["timestamp", "acc_x", "acc_y", "acc_z"]].dropna()
+merged_timeframe.rename(columns={
+    "vehicle_attitude_q[0]": "q_0",
+    "vehicle_attitude_q[1]": "q_1",
+    "vehicle_attitude_q[2]": "q_2",
+    "vehicle_attitude_q[3]": "q_3",
+}, inplace=True)
+vehicle_attitude = merged_timeframe[["timestamp", "q_0", "q_1", "q_2", "q_3"]].dropna()
+merged_timeframe.rename(columns={
+    "actuator_motors_control[0]": "m_0",
+    "actuator_motors_control[1]": "m_1",
+    "actuator_motors_control[2]": "m_2",
+    "actuator_motors_control[3]": "m_3",
+}, inplace=True)
+actuator_controls_orig = merged_timeframe[["timestamp", "m_0", "m_1", "m_2", "m_3"]].dropna()
+merged_timeframe.rename(columns={
+    "actuator_motors_rl_tools_control[0]": "mrl_0",
+    "actuator_motors_rl_tools_control[1]": "mrl_1",
+    "actuator_motors_rl_tools_control[2]": "mrl_2",
+    "actuator_motors_rl_tools_control[3]": "mrl_3",
+}, inplace=True)
+actuator_controls_policy = merged_timeframe[["timestamp", "mrl_0", "mrl_1", "mrl_2", "mrl_3"]].dropna()
+merged_timeframe.rename(columns={
+    "vehicle_angular_velocity_xyz[0]": "w_x",
+    "vehicle_angular_velocity_xyz[1]": "w_y",
+    "vehicle_angular_velocity_xyz[2]": "w_z",
+}, inplace=True)
+vehicle_angular_rate = merged_timeframe[["timestamp", "w_x", "w_y", "w_z"]].dropna()
+# for axis in ["x", "y", "z"]:
+#     vehicle_acceleration[axis] = scipy.signal.filtfilt(b, a, vehicle_acceleration[axis])
+#     # vehicle_acceleration[axis] = vehicle_acceleration[axis] - vehicle_acceleration[axis].mean()
+#     # vehicle_acceleration[axis] = vehicle_acceleration[axis] / vehicle_acceleration[axis].std()
+# for motor in ["0", "1", "2", "3"]:
+#     actuator_controls_orig[motor] = scipy.signal.filtfilt(b, a, actuator_controls_orig[motor])
 
-plt.plot(vehicle_acceleration['timestamp'], vehicle_acceleration["x"], label="acc_x")
-plt.plot(vehicle_acceleration['timestamp'], vehicle_acceleration["y"], label="acc_y")
-plt.plot(vehicle_acceleration['timestamp'], vehicle_acceleration["z"], label="acc_z")
+plt.plot(vehicle_acceleration['timestamp'], vehicle_acceleration["acc_x"], label="acc_x")
+plt.plot(vehicle_acceleration['timestamp'], vehicle_acceleration["acc_y"], label="acc_y")
+plt.plot(vehicle_acceleration['timestamp'], vehicle_acceleration["acc_z"], label="acc_z")
 plt.legend()
 plt.show()
-plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["x"], label="w_x")
-plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["y"], label="w_y")
-plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["z"], label="w_z")
+plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["w_x"], label="w_x")
+plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["w_y"], label="w_y")
+plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["w_z"], label="w_z")
 plt.legend()
 plt.show()
-plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["0"], label="m_0")
-plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["1"], label="m_1")
-plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["2"], label="m_2")
-plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["3"], label="m_3")
+plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["m_0"], label="m_0")
+plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["m_1"], label="m_1")
+plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["m_2"], label="m_2")
+plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["m_3"], label="m_3")
 plt.legend()
 plt.show()
-plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["0"], label="m_0")
-plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["1"], label="m_1")
-plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["2"], label="m_2")
-plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["3"], label="m_3")
+plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["mrl_0"], label="m_0")
+plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["mrl_1"], label="m_1")
+plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["mrl_2"], label="m_2")
+plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["mrl_3"], label="m_3")
 plt.legend()
 plt.show()
-plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["0"], label="q_0")
-plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["1"], label="q_1")
-plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["2"], label="q_2")
-plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["3"], label="q_3")
+plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["q_0"], label="q_0")
+plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["q_1"], label="q_1")
+plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["q_2"], label="q_2")
+plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["q_3"], label="q_3")
 plt.legend()
 plt.show()
 # plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["x"], label="gyro_x")
 
 
-actuator_controls.describe()
+actuator_controls_orig.describe()
 vehicle_attitude.describe()
 vehicle_acceleration.describe()
 vehicle_angular_rate.describe()
 
+thrust_acc = merged_timeframe[["timestamp", "m_0", "m_1", "m_2", "m_3", "acc_x", "acc_y", "acc_z"]].dropna()
+thrust = thrust_acc["m_0"] ** 2 + thrust_acc["m_1"] ** 2 + thrust_acc["m_2"] ** 2 + thrust_acc["m_3"] ** 2
+acceleration = np.sqrt(thrust_acc["acc_x"] ** 2 + thrust_acc["acc_y"] ** 2 + thrust_acc["acc_z"] ** 2)
+model = LinearRegression()
+model.fit(thrust.values.reshape(-1, 1), acceleration.values.reshape(-1, 1))
+model.coef_[0][0]
+model.intercept_[0]
 
+def plot_thrust_acc(tau, ax):
+    print(f"tau: {tau}")
+    thrust_acc = merged_timeframe[["timestamp", "m_0", "m_1", "m_2", "m_3", "acc_x", "acc_y", "acc_z"]].dropna()
+    thrust = thrust_acc["m_0"] ** 2 + thrust_acc["m_1"] ** 2 + thrust_acc["m_2"] ** 2 + thrust_acc["m_3"] ** 2
+    thrust_acc = thrust_acc[(thrust > 0.15) & (thrust < 0.5)]
+    thrust = thrust_acc["m_0"] ** 2 + thrust_acc["m_1"] ** 2 + thrust_acc["m_2"] ** 2 + thrust_acc["m_3"] ** 2
+    acceleration = np.sqrt(thrust_acc["acc_x"] ** 2 + thrust_acc["acc_y"] ** 2 + thrust_acc["acc_z"] ** 2)
+
+    thrust = thrust.ewm(halflife=f"{tau} s", times=pd.to_datetime(thrust_acc["timestamp"], unit="s")).mean()
+    model = LinearRegression()
+
+    model.fit(thrust.values.reshape(-1, 1), acceleration.values.reshape(-1, 1))
+
+    correlation = thrust.corr(acceleration)
+    if ax is not None:
+        ax.scatter(thrust, acceleration)
+        ax.set_title(f"Tau = {tau}")
+        ax.set_xlabel("Thrust")
+        ax.set_ylabel("Acceleration")
+    return correlation, (model.coef_[0][0], model.intercept_[0])
+
+tau_values = list(np.linspace(0.005, 0.04, 60))
+
+correlations = [plot_thrust_acc(tau, None) for tau in tau_values]
+best_tau_index = np.argmax([np.abs(x[0]) for x in correlations])
+best_tau = tau_values[best_tau_index]
+best_model = correlations[best_tau_index][1]
+print(f"Best tau: {best_tau}")
+
+fig, ax = plt.subplots()
+plot_thrust_acc(best_tau, ax)
+x = np.linspace(0, 1, 100)
+ax.plot(x, best_model[0] * x + best_model[1], color="red")
+fig.show()
+
+
+
+fig, ax = plt.subplots()
+def animate(i):
+    ax.clear()
+    plot_thrust_acc(tau_values[i], ax)
+
+ani = FuncAnimation(fig, animate, frames=len(tau_values), interval=500)
+ani.save('thrust_acc_animation.gif', writer='imagemagick', fps=1)
 
 exit()
 
