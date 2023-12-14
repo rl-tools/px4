@@ -7,6 +7,7 @@ RLtoolsCommander::RLtoolsCommander() : ModuleParams(nullptr), ScheduledWorkItem(
 	activation_position[0] = 0;
 	activation_position[1] = 1;
 	activation_position[2] = 2;
+	_rl_tools_command_pub.advertise();
 }
 
 RLtoolsCommander::~RLtoolsCommander(){
@@ -53,17 +54,17 @@ void RLtoolsCommander::Run()
 		}
 	}
 
-	constexpr uint32_t POSITION_TIMEOUT = 100*1000; // 100ms timeout
-	constexpr uint32_t RC_TRIGGER_TIMEOUT = 200*1000; // 200ms timeout
+	constexpr uint32_t POSITION_TIMEOUT = 1000*1000; // 100ms timeout
+	constexpr uint32_t RC_TRIGGER_TIMEOUT = 2000*1000; // 200ms timeout
 	next_command_active = next_command_active && last_rc_update_time_set && last_position_update_time_set;
 	if(last_rc_update_time_set && ((current_time - last_rc_update_time) > RC_TRIGGER_TIMEOUT)){
 		next_command_active = false;
 	}
-	if(last_position_update_time_set && ((current_time - last_position_update_time_set) > POSITION_TIMEOUT)){
+	if(last_position_update_time_set && ((current_time - last_position_update_time) > POSITION_TIMEOUT)){
 		next_command_active = false;
 	}
 	if(prev_command_active != next_command_active){
-		if(next_command_active){
+		if(next_command_active){ // Jonas said it's not working. What should we do? Go Home!!!!!!!
 			PX4_INFO("Command enabled");
 			activation_position[0] = vehicle_local_position.x;
 			activation_position[1] = vehicle_local_position.y;

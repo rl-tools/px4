@@ -15,12 +15,16 @@ RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_
 	timestamp_last_local_position_set = false;
 	timestamp_last_attitude_set = false;
 	timestamp_last_command_set = false;
+	timeout_message_sent = false;
 
 	// controller state
 	timestamp_last_forward_pass_set = false;
 	controller_tick = 0;
 
 	_actuator_motors_rl_tools_pub.advertise();
+	if constexpr(MAKE_SOME_NOISE){
+		_tune_control_pub.advertise();
+	}
 }
 
 RLtoolsPolicy::~RLtoolsPolicy()
@@ -162,21 +166,34 @@ void RLtoolsPolicy::Run()
 	}
 
 	if((current_time - timestamp_last_angular_velocity) > OBSERVATION_TIMEOUT_ANGULAR_VELOCITY){
-		PX4_ERR("angular velocity timeout");
+		if(!timeout_message_sent){
+			PX4_ERR("angular velocity timeout");
+			timeout_message_sent = true;
+		}
 		return;
 	}
 	if((current_time - timestamp_last_local_position) > OBSERVATION_TIMEOUT_POSITION){
-		PX4_ERR("local position timeout");
+		if(!timeout_message_sent){
+			PX4_ERR("local position timeout");
+			timeout_message_sent = true;
+		}
 		return;
 	}
 	if((current_time - timestamp_last_attitude) > OBSERVATION_TIMEOUT_ATTITUDE){
-		PX4_ERR("attitude timeout");
+		if(!timeout_message_sent){
+			PX4_ERR("attitude timeout");
+			timeout_message_sent = true;
+		}
 		return;
 	}
 	if((current_time - timestamp_last_command) > COMMAND_TIMEOUT){
-		PX4_ERR("command timeout");
+		if(!timeout_message_sent){
+			PX4_ERR("command timeout");
+			timeout_message_sent = true;
+		}
 		return;
 	}
+	timeout_message_sent = false;
 
 	if(timestamp_last_forward_pass_set){
 		if((current_time - timestamp_last_forward_pass) < CONTROL_INTERVAL){
@@ -201,6 +218,16 @@ void RLtoolsPolicy::Run()
 		}
 	}
 	_actuator_motors_rl_tools_pub.publish(actuator_motors);
+	if constexpr(MAKE_SOME_NOISE){
+		tune_control_s tune_control;
+		tune_control.tune_id = 0;
+		tune_control.volume = tune_control_s::VOLUME_LEVEL_DEFAULT;
+		tune_control.tune_override = true;
+		tune_control.frequency = 2000;
+		tune_control.duration = 5000;
+		_tune_control_pub.publish(tune_control);
+
+	}
 	perf_end(_loop_perf);
 }
 

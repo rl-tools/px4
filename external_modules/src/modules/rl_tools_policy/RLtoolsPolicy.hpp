@@ -27,6 +27,7 @@ namespace rlt = RL_TOOLS_NAMESPACE_WRAPPER ::rl_tools;
 #include <uORB/topics/vehicle_angular_velocity.h>
 #include <uORB/topics/actuator_motors.h>
 #include <uORB/topics/rl_tools_command.h>
+#include <uORB/topics/tune_control.h>
 
 using namespace time_literals;
 
@@ -58,6 +59,7 @@ private:
 	static constexpr TI OBSERVATION_TIMEOUT_POSITION = 100 * 1000;
 	static constexpr TI OBSERVATION_TIMEOUT_ATTITUDE = 50 * 1000;
 	static constexpr TI COMMAND_TIMEOUT = 100 * 1000;
+	static constexpr bool MAKE_SOME_NOISE = true;
 
 	void Run() override;
 
@@ -68,6 +70,7 @@ private:
 	rl_tools_command_s _rl_tools_command{};
 	uint32_t timestamp_last_local_position, timestamp_last_angular_velocity, timestamp_last_attitude, timestamp_last_command;
 	bool timestamp_last_local_position_set = false, timestamp_last_angular_velocity_set = false, timestamp_last_attitude_set = false, timestamp_last_command_set = false;
+	bool timeout_message_sent = false;
 
 	
 	uORB::Subscription _rl_tools_command_sub{ORB_ID(rl_tools_command)};
@@ -75,6 +78,7 @@ private:
 	uORB::SubscriptionCallbackWorkItem _vehicle_angular_velocity_sub{this, ORB_ID(vehicle_angular_velocity)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_sub{this, ORB_ID(vehicle_attitude)};
 	uORB::Publication<actuator_motors_s> _actuator_motors_rl_tools_pub{ORB_ID(actuator_motors_rl_tools)};
+	uORB::Publication<tune_control_s> _tune_control_pub{ORB_ID(tune_control)};
 
 	// Performance (perf) counters
 	perf_counter_t	_loop_perf{perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")};
