@@ -9,115 +9,112 @@ import matplotlib.pyplot as plt
 import subprocess
 import numpy as np
 from matplotlib.animation import FuncAnimation
-from sklearn.linear_model import LinearRegression
-
-def state_message(position, orientation):
-    example_state = {
-        "pose": {
-            "position": list(position),
-            "orientation": list(orientation)
-        },
-        "rotor_states": [
-            {"rpm": 0},
-            {"rpm": 0},
-            {"rpm": 0},
-            {"rpm": 0}
-        ]
-    }
-
-    set_state_message = {
-        "channel": "setDroneState",
-        "data": {
-            "id": "default",
-            "data": example_state
-        }
-    }
-    return set_state_message
-
-
-with open("sysid/model.json", "r") as f:
-    model = json.load(f)
-
-logfile_input = "sysid/logs/log_45_2023-12-13-21-07-46.ulg"
-retval = subprocess.run(["ulog2csv", logfile_input, "-o", f"sysid/logs_csv/{os.path.split(logfile_input)[-1]}"])
-assert(retval.returncode == 0)
-
-logfile = os.path.join("sysid", "logs_csv", os.path.split(logfile_input)[-1])
-
-
+from sklearn.linear_model import LinearRegression, HuberRegressor
 import pandas as pd
 import os
 import re
+import scipy
 
-dfs = {}
 
-for file in os.listdir(logfile):
-    if file.endswith('.csv'):
-        file_path = os.path.join(logfile, file)
+mass = 1
+rotor_x_displacement = 0.0775
+rotor_y_displacement = 0.0981
+rotor_positions = np.array([
+    [ rotor_x_displacement, -rotor_y_displacement, 0],
+    [-rotor_x_displacement,  rotor_y_displacement, 0],
+    [ rotor_x_displacement,  rotor_y_displacement, 0],
+    [-rotor_x_displacement, -rotor_y_displacement, 0]
+])
 
-        identifier = re.search(r'log_\d+_\d+-\d+-\d+-\d+-\d+-\d+_(.+?)_\d+\.csv', file)
-        if identifier:
-            identifier = identifier.group(1)
+def load_file(logfile_input, plot=False):
+    retval = subprocess.run(["ulog2csv", logfile_input, "-o", f"sysid/logs_csv/{os.path.split(logfile_input)[-1]}"])
+    assert(retval.returncode == 0)
 
-        df = pd.read_csv(file_path)
-        if "timestamp_sample" in df.columns:
-            df.columns = [f"{identifier}_{col}" if col != 'timestamp_sample' else col for col in df.columns]
-            df.rename(columns={f"timestamp_sample": "timestamp"}, inplace=True)
-            dfs[identifier] = df
+    logfile = os.path.join("sysid", "logs_csv", os.path.split(logfile_input)[-1])
+    dfs = {}
 
-merged_df = pd.DataFrame()
-for df in dfs.values():
-    if merged_df.empty:
-        merged_df = df
+    for file in os.listdir(logfile):
+        if file.endswith('.csv'):
+            file_path = os.path.join(logfile, file)
+
+            identifier = re.search(r'log_\d+_\d+-\d+-\d+-\d+-\d+-\d+_(.+?)_\d+\.csv', file)
+            if identifier:
+                identifier = identifier.group(1)
+
+            df = pd.read_csv(file_path)
+            if "timestamp_sample" in df.columns:
+                df.columns = [f"{identifier}_{col}" if col != 'timestamp_sample' else col for col in df.columns]
+                df.rename(columns={f"timestamp_sample": "timestamp"}, inplace=True)
+                dfs[identifier] = df
+
+    merged_df = pd.DataFrame()
+    for df in dfs.values():
+        if merged_df.empty:
+            merged_df = df
+        else:
+            merged_df = pd.merge(merged_df, df, on='timestamp', how='outer')
+    merged_df = merged_df.sort_values(by='timestamp')
+    merged_df = merged_df.reset_index(drop=True)
+    merged_df["timestamp"] = (merged_df["timestamp"] - merged_df.loc[0]["timestamp"]) / 1e6
+    merged_df["timestamp"] = pd.to_datetime(merged_df["timestamp"], unit="s")
+    merged_df.set_index('timestamp', inplace=True)
+
+    if plot:
+        plt.plot(merged_df.index.to_series().diff().dropna())
+        plt.show()
+    return merged_df
+
+def find_col(colname, merged_df):
+    col_frequencies = [merged_df[col].isna().mean() for col in merged_df.columns]
+    for col, frequency in sorted(list(zip(merged_df.columns, col_frequencies)), key=lambda x: x[1]):
+        if colname in col:
+            print(f"{col}: {frequency}")
+
+
+def get_timeframe(merged_df, time_start, time_end, plot=False):
+    merged_timeframe = merged_df[(merged_df.index > pd.to_datetime(time_start, unit="s")) & (merged_df.index < pd.to_datetime(time_end, unit="s"))].copy()
+    merged_timeframe.rename(columns={
+        "vehicle_acceleration_xyz[0]": "acc_x",
+        "vehicle_acceleration_xyz[1]": "acc_y",
+        "vehicle_acceleration_xyz[2]": "acc_z",
+    }, inplace=True)
+    vehicle_acceleration = merged_timeframe[["acc_x", "acc_y", "acc_z"]].dropna()
+    merged_timeframe.rename(columns={
+        "vehicle_attitude_q[0]": "q_0",
+        "vehicle_attitude_q[1]": "q_1",
+        "vehicle_attitude_q[2]": "q_2",
+        "vehicle_attitude_q[3]": "q_3",
+    }, inplace=True)
+    vehicle_attitude = merged_timeframe[["q_0", "q_1", "q_2", "q_3"]].dropna()
+    merged_timeframe.rename(columns={
+        "actuator_motors_control[0]": "m_0",
+        "actuator_motors_control[1]": "m_1",
+        "actuator_motors_control[2]": "m_2",
+        "actuator_motors_control[3]": "m_3",
+    }, inplace=True)
+    actuator_controls_orig = merged_timeframe[["m_0", "m_1", "m_2", "m_3"]].dropna()
+    merged_timeframe.rename(columns={
+        "actuator_motors_rl_tools_control[0]": "mrl_0",
+        "actuator_motors_rl_tools_control[1]": "mrl_1",
+        "actuator_motors_rl_tools_control[2]": "mrl_2",
+        "actuator_motors_rl_tools_control[3]": "mrl_3",
+    }, inplace=True)
+    if "mrl_0" in merged_timeframe.columns:
+        actuator_controls_policy = merged_timeframe[["mrl_0", "mrl_1", "mrl_2", "mrl_3"]].dropna()
     else:
-        merged_df = pd.merge(merged_df, df, on='timestamp', how='outer')
-merged_df = merged_df.sort_values(by='timestamp')
-merged_df = merged_df.reset_index(drop=True)
-merged_df["timestamp"] = (merged_df["timestamp"] - merged_df.loc[0]["timestamp"]) / 1e6
-
-col_frequencies = [merged_df[col].isna().mean() for col in merged_df.columns]
-for col, frequency in sorted(list(zip(merged_df.columns, col_frequencies)), key=lambda x: x[1]):
-    if "timestamp_sample" in col:
-        print(f"{col}: {frequency}")
-
-import scipy.signal
-b, a = scipy.signal.butter(4, 0.50)
-time_start = 1
-time_end = 10
-merged_timeframe = merged_df[(merged_df["timestamp"] > time_start) & (merged_df["timestamp"] < time_end)].copy()
-merged_timeframe.rename(columns={
-    "vehicle_acceleration_xyz[0]": "acc_x",
-    "vehicle_acceleration_xyz[1]": "acc_y",
-    "vehicle_acceleration_xyz[2]": "acc_z",
-}, inplace=True)
-vehicle_acceleration = merged_timeframe[["timestamp", "acc_x", "acc_y", "acc_z"]].dropna()
-merged_timeframe.rename(columns={
-    "vehicle_attitude_q[0]": "q_0",
-    "vehicle_attitude_q[1]": "q_1",
-    "vehicle_attitude_q[2]": "q_2",
-    "vehicle_attitude_q[3]": "q_3",
-}, inplace=True)
-vehicle_attitude = merged_timeframe[["timestamp", "q_0", "q_1", "q_2", "q_3"]].dropna()
-merged_timeframe.rename(columns={
-    "actuator_motors_control[0]": "m_0",
-    "actuator_motors_control[1]": "m_1",
-    "actuator_motors_control[2]": "m_2",
-    "actuator_motors_control[3]": "m_3",
-}, inplace=True)
-actuator_controls_orig = merged_timeframe[["timestamp", "m_0", "m_1", "m_2", "m_3"]].dropna()
-merged_timeframe.rename(columns={
-    "actuator_motors_rl_tools_control[0]": "mrl_0",
-    "actuator_motors_rl_tools_control[1]": "mrl_1",
-    "actuator_motors_rl_tools_control[2]": "mrl_2",
-    "actuator_motors_rl_tools_control[3]": "mrl_3",
-}, inplace=True)
-actuator_controls_policy = merged_timeframe[["timestamp", "mrl_0", "mrl_1", "mrl_2", "mrl_3"]].dropna()
-merged_timeframe.rename(columns={
-    "vehicle_angular_velocity_xyz[0]": "w_x",
-    "vehicle_angular_velocity_xyz[1]": "w_y",
-    "vehicle_angular_velocity_xyz[2]": "w_z",
-}, inplace=True)
-vehicle_angular_rate = merged_timeframe[["timestamp", "w_x", "w_y", "w_z"]].dropna()
+        actuator_controls_policy = None
+    merged_timeframe.rename(columns={
+        "vehicle_angular_velocity_xyz[0]": "w_x",
+        "vehicle_angular_velocity_xyz[1]": "w_y",
+        "vehicle_angular_velocity_xyz[2]": "w_z",
+    }, inplace=True)
+    vehicle_angular_rate = merged_timeframe[["w_x", "w_y", "w_z"]].dropna()
+    merged_timeframe.rename(columns={
+        "vehicle_angular_velocity_xyz_derivative[0]": "dw_x",
+        "vehicle_angular_velocity_xyz_derivative[1]": "dw_y",
+        "vehicle_angular_velocity_xyz_derivative[2]": "dw_z",
+    }, inplace=True)
+    vehicle_angular_rate_derivative = merged_timeframe[["dw_x", "dw_y", "dw_z"]].dropna()
 # for axis in ["x", "y", "z"]:
 #     vehicle_acceleration[axis] = scipy.signal.filtfilt(b, a, vehicle_acceleration[axis])
 #     # vehicle_acceleration[axis] = vehicle_acceleration[axis] - vehicle_acceleration[axis].mean()
@@ -125,116 +122,223 @@ vehicle_angular_rate = merged_timeframe[["timestamp", "w_x", "w_y", "w_z"]].drop
 # for motor in ["0", "1", "2", "3"]:
 #     actuator_controls_orig[motor] = scipy.signal.filtfilt(b, a, actuator_controls_orig[motor])
 
-plt.plot(vehicle_acceleration['timestamp'], vehicle_acceleration["acc_x"], label="acc_x")
-plt.plot(vehicle_acceleration['timestamp'], vehicle_acceleration["acc_y"], label="acc_y")
-plt.plot(vehicle_acceleration['timestamp'], vehicle_acceleration["acc_z"], label="acc_z")
-plt.legend()
-plt.show()
-plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["w_x"], label="w_x")
-plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["w_y"], label="w_y")
-plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["w_z"], label="w_z")
-plt.legend()
-plt.show()
-plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["m_0"], label="m_0")
-plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["m_1"], label="m_1")
-plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["m_2"], label="m_2")
-plt.plot(actuator_controls_orig['timestamp'], actuator_controls_orig["m_3"], label="m_3")
-plt.legend()
-plt.show()
-plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["mrl_0"], label="m_0")
-plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["mrl_1"], label="m_1")
-plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["mrl_2"], label="m_2")
-plt.plot(actuator_controls_policy['timestamp'], actuator_controls_policy["mrl_3"], label="m_3")
-plt.legend()
-plt.show()
-plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["q_0"], label="q_0")
-plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["q_1"], label="q_1")
-plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["q_2"], label="q_2")
-plt.plot(vehicle_attitude['timestamp'], vehicle_attitude["q_3"], label="q_3")
-plt.legend()
-plt.show()
-# plt.plot(vehicle_angular_rate['timestamp'], vehicle_angular_rate["x"], label="gyro_x")
+    if plot:
+        plt.plot(vehicle_acceleration.index, vehicle_acceleration["acc_x"], label="acc_x")
+        plt.plot(vehicle_acceleration.index, vehicle_acceleration["acc_y"], label="acc_y")
+        plt.plot(vehicle_acceleration.index, vehicle_acceleration["acc_z"], label="acc_z")
+        plt.legend()
+        plt.show()
+        plt.plot(vehicle_angular_rate.index, vehicle_angular_rate["w_x"], label="w_x")
+        plt.plot(vehicle_angular_rate.index, vehicle_angular_rate["w_y"], label="w_y")
+        plt.plot(vehicle_angular_rate.index, vehicle_angular_rate["w_z"], label="w_z")
+        plt.legend()
+        plt.show()
+        plt.plot(vehicle_angular_rate_derivative.index, vehicle_angular_rate_derivative["dw_x"], label="dw_x")
+        plt.plot(vehicle_angular_rate_derivative.index, vehicle_angular_rate_derivative["dw_y"], label="dw_y")
+        plt.plot(vehicle_angular_rate_derivative.index, vehicle_angular_rate_derivative["dw_z"], label="dw_z")
+        plt.legend()
+        plt.show()
+        plt.plot(actuator_controls_orig.index, actuator_controls_orig["m_0"], label="m_0")
+        plt.plot(actuator_controls_orig.index, actuator_controls_orig["m_1"], label="m_1")
+        plt.plot(actuator_controls_orig.index, actuator_controls_orig["m_2"], label="m_2")
+        plt.plot(actuator_controls_orig.index, actuator_controls_orig["m_3"], label="m_3")
+        plt.legend()
+        plt.show()
+        if actuator_controls_policy is not None:
+            plt.plot(actuator_controls_policy.index, actuator_controls_policy["mrl_0"], label="m_0")
+            plt.plot(actuator_controls_policy.index, actuator_controls_policy["mrl_1"], label="m_1")
+            plt.plot(actuator_controls_policy.index, actuator_controls_policy["mrl_2"], label="m_2")
+            plt.plot(actuator_controls_policy.index, actuator_controls_policy["mrl_3"], label="m_3")
+            plt.legend()
+            plt.show()
+        plt.plot(vehicle_attitude.index, vehicle_attitude["q_0"], label="q_0")
+        plt.plot(vehicle_attitude.index, vehicle_attitude["q_1"], label="q_1")
+        plt.plot(vehicle_attitude.index, vehicle_attitude["q_2"], label="q_2")
+        plt.plot(vehicle_attitude.index, vehicle_attitude["q_3"], label="q_3")
+        plt.legend()
+        plt.show()
+    actuator_controls_orig.describe()
+    vehicle_attitude.describe()
+    vehicle_acceleration.describe()
+    vehicle_angular_rate.describe()
+    return merged_timeframe
 
-
-actuator_controls_orig.describe()
-vehicle_attitude.describe()
-vehicle_acceleration.describe()
-vehicle_angular_rate.describe()
-
-thrust_acc = merged_timeframe[["timestamp", "m_0", "m_1", "m_2", "m_3", "acc_x", "acc_y", "acc_z"]].dropna()
-thrust = thrust_acc["m_0"] ** 2 + thrust_acc["m_1"] ** 2 + thrust_acc["m_2"] ** 2 + thrust_acc["m_3"] ** 2
-acceleration = np.sqrt(thrust_acc["acc_x"] ** 2 + thrust_acc["acc_y"] ** 2 + thrust_acc["acc_z"] ** 2)
-model = LinearRegression()
-model.fit(thrust.values.reshape(-1, 1), acceleration.values.reshape(-1, 1))
-model.coef_[0][0]
-model.intercept_[0]
-
-def plot_thrust_acc(tau, ax):
+def throttle_thrust(tau, merged_timeframes, ax=None, squared_throttle_lower_bound = 0.0, squared_throttle_upper_bound = 4.0):
     print(f"tau: {tau}")
-    thrust_acc = merged_timeframe[["timestamp", "m_0", "m_1", "m_2", "m_3", "acc_x", "acc_y", "acc_z"]].dropna()
-    thrust = thrust_acc["m_0"] ** 2 + thrust_acc["m_1"] ** 2 + thrust_acc["m_2"] ** 2 + thrust_acc["m_3"] ** 2
-    thrust_acc = thrust_acc[(thrust > 0.15) & (thrust < 0.5)]
-    thrust = thrust_acc["m_0"] ** 2 + thrust_acc["m_1"] ** 2 + thrust_acc["m_2"] ** 2 + thrust_acc["m_3"] ** 2
-    acceleration = np.sqrt(thrust_acc["acc_x"] ** 2 + thrust_acc["acc_y"] ** 2 + thrust_acc["acc_z"] ** 2)
+    throttles = []
+    thrusts = []
+    def filter_acc(acc):
+        cutoff_frequency = 50
+        sampling_rate = 1000
+        nyquist = sampling_rate / 2
+        b, a = scipy.signal.butter(3, cutoff_frequency / nyquist, btype="low")
+        acc = scipy.signal.filtfilt(b, a, acc)
+        return acc
+    for merged_timeframe in merged_timeframes:
+        throttle_thrust_sparse = merged_timeframe[["m_0", "m_1", "m_2", "m_3", "acc_x", "acc_y", "acc_z"]].dropna(how="all", subset=["m_0", "m_1", "m_2", "m_3", "acc_x", "acc_y", "acc_z"])
+        throttle_thrust = throttle_thrust_sparse.interpolate(method="time").dropna()
+        throttle = throttle_thrust["m_0"] ** 2 + throttle_thrust["m_1"] ** 2 + throttle_thrust["m_2"] ** 2 + throttle_thrust["m_3"] ** 2
+        throttle_thrust = throttle_thrust[(throttle > squared_throttle_lower_bound) & (throttle < squared_throttle_upper_bound)]
+        throttle = throttle_thrust["m_0"] ** 2 + throttle_thrust["m_1"] ** 2 + throttle_thrust["m_2"] ** 2 + throttle_thrust["m_3"] ** 2
+        acceleration = pd.Series(np.sqrt(filter_acc(throttle_thrust["acc_x"]) ** 2 + filter_acc(throttle_thrust["acc_y"]) ** 2 + filter_acc(throttle_thrust["acc_z"]) ** 2), index=throttle_thrust.index)
+        thrust = acceleration * mass
+        throttle = throttle.ewm(halflife=f"{tau*np.log(2)} s", times=throttle_thrust.index).mean()
+        throttles.append(throttle)
+        thrusts.append(thrust)
+    throttle = pd.concat(throttles)
+    thrust = pd.concat(thrusts)
+    model = LinearRegression(fit_intercept=False)
 
-    thrust = thrust.ewm(halflife=f"{tau} s", times=pd.to_datetime(thrust_acc["timestamp"], unit="s")).mean()
-    model = LinearRegression()
+    model.fit(throttle.values.reshape(-1, 1), thrust.values.reshape(-1, 1))
 
-    model.fit(thrust.values.reshape(-1, 1), acceleration.values.reshape(-1, 1))
-
-    correlation = thrust.corr(acceleration)
+    correlation = throttle.corr(thrust)
     if ax is not None:
-        ax.scatter(thrust, acceleration)
+        ax.scatter(throttle, thrust)
         ax.set_title(f"Tau = {tau}")
-        ax.set_xlabel("Thrust")
-        ax.set_ylabel("Acceleration")
-    return correlation, (model.coef_[0][0], model.intercept_[0])
+        ax.set_xlabel("Throttle")
+        ax.set_ylabel("Thrust")
+    return correlation, (model.coef_[0][0], model.intercept_[0] if model.fit_intercept else 0)
 
-tau_values = list(np.linspace(0.005, 0.04, 60))
+def plot_tau(tau, merged_timeframes, best_model=None, squared_throttle_lower_bound=0):
+    fig = plt.figure()
+    throttle_thrust(tau, merged_timeframes, squared_throttle_lower_bound=squared_throttle_lower_bound, ax=plt.gca())
+    x = np.linspace(0, 4, 100)
+    if best_model is not None:
+        plt.plot(x, best_model[0] * x + best_model[1], color="red")
+        plt.title(f"Tau = {tau}, Slope = {best_model[0]} Intercept = {best_model[1]}")
+    else:
+        plt.title(f"Tau = {tau}")
+    plt.show()
+    
+def find_tau(merged_timeframes, plot=False, squared_throttle_lower_bound=0.2):
 
-correlations = [plot_thrust_acc(tau, None) for tau in tau_values]
-best_tau_index = np.argmax([np.abs(x[0]) for x in correlations])
-best_tau = tau_values[best_tau_index]
-best_model = correlations[best_tau_index][1]
-print(f"Best tau: {best_tau}")
-
-fig, ax = plt.subplots()
-plot_thrust_acc(best_tau, ax)
-x = np.linspace(0, 1, 100)
-ax.plot(x, best_model[0] * x + best_model[1], color="red")
-fig.show()
+    tau_values = list(np.linspace(0.005, 0.5, 60))
 
 
 
-fig, ax = plt.subplots()
-def animate(i):
-    ax.clear()
-    plot_thrust_acc(tau_values[i], ax)
+    correlations = [throttle_thrust(tau, merged_timeframes, squared_throttle_lower_bound=squared_throttle_lower_bound) for tau in tau_values]
+    best_tau_index = np.argmax([np.abs(x[0]) for x in correlations])
+    best_tau = tau_values[best_tau_index]
+    best_model = correlations[best_tau_index][1]
+    if plot:
+        plt.plot(tau_values, [x[0] for x in correlations])
+        plt.title("Correlation")
+        plt.xlabel("Tau")
+        plt.ylabel("Correlation")
+        plt.plot([best_tau, best_tau], [0, 1], color="red")
+        plt.show()
+    print(f"Best tau: {best_tau}")
 
-ani = FuncAnimation(fig, animate, frames=len(tau_values), interval=500)
-ani.save('thrust_acc_animation.gif', writer='imagemagick', fps=1)
+    if plot:
+        plot_tau(best_tau, merged_timeframes, best_model=best_model, squared_throttle_lower_bound=squared_throttle_lower_bound)
+    animate = False
+    if animate:
 
-exit()
+        fig, ax = plt.subplots()
+        def animate(i):
+            ax.clear()
+            throttle_thrust(tau_values[i], merged_timeframes, ax, squared_throttle_lower_bound=squared_throttle_lower_bound)
 
-async def connect_to_websocket():
-    uri = "ws://localhost:8080"
-    async with websockets.connect(uri) as websocket:
+        ani = FuncAnimation(fig, animate, frames=len(tau_values), interval=500)
+        ani.save('throttle_thrust_animation.gif', writer='imagemagick', fps=3)
+    return best_tau
 
-        add_drone_message = {
-            "channel": "addDrone",
-            "data": model
-        }
 
-        await websocket.send(json.dumps(add_drone_message))
-        for t_ms in range(0, 10000, 10):
-            t = t_ms / 1000
-            position = [(t % 10)/10, 0, 0]
-            orientation = [
-                [1.0, 0.0, 0.0],
-                [0.0, 0.984807753012208, -0.17364817766693033],
-                [0.0, 0.17364817766693033, 0.984807753012208]
-            ]
-            await websocket.send(json.dumps(state_message(position, orientation)))
-            time.sleep(0.01)
+def find_inertia(merged_timeframes, selected_tau, selected_slope, selected_intercept, plot=False):
 
-asyncio.get_event_loop().run_until_complete(connect_to_websocket())
+    motor_thrusts_angular_accelerations = []
+    for merged_timeframe in merged_timeframes:
+        throttle_thrust_sparse = merged_timeframe[["m_0", "m_1", "m_2", "m_3", "dw_x", "dw_y", "dw_z"]].dropna(how="all", subset=["m_0", "m_1", "m_2", "m_3", "dw_x", "dw_y", "dw_z"])
+        throttle_thrust = throttle_thrust_sparse.interpolate(method="time").dropna()
+        motor_thrusts = [(selected_intercept + selected_slope*throttle_thrust[motor]**2).ewm(halflife=f"{selected_tau*np.log(2)} s", times=throttle_thrust.index).mean() for motor in ["m_0", "m_1", "m_2", "m_3"]]
+        motor_thrusts_angular_acceleration = throttle_thrust.copy()
+        motor_thrusts_angular_acceleration["m_0"] = motor_thrusts[0]
+        motor_thrusts_angular_acceleration["m_1"] = motor_thrusts[1]
+        motor_thrusts_angular_acceleration["m_2"] = motor_thrusts[2]
+        motor_thrusts_angular_acceleration["m_3"] = motor_thrusts[3]
+
+        motor = 0
+        motor_torque = lambda motor, thrust: np.cross(rotor_positions[motor], np.array([0, 0, thrust]))
+        torque = motor_thrusts_angular_acceleration["m_0"].map(lambda thrust: motor_torque(0, thrust))
+        torque += motor_thrusts_angular_acceleration["m_1"].map(lambda thrust: motor_torque(1, thrust))
+        torque += motor_thrusts_angular_acceleration["m_2"].map(lambda thrust: motor_torque(2, thrust))
+        torque += motor_thrusts_angular_acceleration["m_3"].map(lambda thrust: motor_torque(3, thrust))
+        motor_thrusts_angular_acceleration["torque_x"] = torque.map(lambda torque: torque[0])
+        motor_thrusts_angular_acceleration["torque_y"] = torque.map(lambda torque: torque[1])
+        motor_thrusts_angular_acceleration["torque_z"] = torque.map(lambda torque: torque[2])
+
+        if plot:
+            plt.plot(motor_thrusts_angular_acceleration.index, motor_thrusts_angular_acceleration["m_0"], label="m_0")
+            plt.plot(motor_thrusts_angular_acceleration.index, motor_thrusts_angular_acceleration["m_1"], label="m_1")
+            plt.plot(motor_thrusts_angular_acceleration.index, motor_thrusts_angular_acceleration["m_2"], label="m_2")
+            plt.plot(motor_thrusts_angular_acceleration.index, motor_thrusts_angular_acceleration["m_3"], label="m_3")
+            plt.plot(motor_thrusts_angular_acceleration.index, motor_thrusts_angular_acceleration["torque_x"], label="torque_x")
+            plt.show()
+        for axis in ["x", "y", "z"]:
+            motor_thrusts_angular_acceleration[f"dw_{axis}"] = motor_thrusts_angular_acceleration[f"dw_{axis}"].ewm(halflife=f"{0.01} s", times=motor_thrusts_angular_acceleration.index).mean()
+        motor_thrusts_angular_accelerations.append(motor_thrusts_angular_acceleration)
+    
+    motor_thrusts_angular_acceleration = pd.concat(motor_thrusts_angular_accelerations)
+
+    def moment_of_inertia(axis, plot=False):
+    # axis = "x"
+        invert = axis == "y" or axis == "z"
+        # model = LinearRegression()
+        model = HuberRegressor()
+        d = motor_thrusts_angular_acceleration.copy()
+        d = d[(np.abs(d[f"dw_{axis}"]) > 10)]
+        d = d[(np.abs(d[f"torque_{axis}"]) > 0.01)]
+        model.fit(d[f"torque_{axis}"].values.reshape(-1, 1), d[f"dw_{axis}"].values.reshape(-1, 1) * (-1 if invert else 1))
+        # I_inv, intercept = (model.coef_[0][0], model.intercept_[0]) # intercept should be close to 0
+        I_inv, intercept = (model.coef_[0], model.intercept_) # intercept should be close to 0
+        I = 1/I_inv
+        if plot:
+            plt.scatter(d[f"torque_{axis}"], d[f"dw_{axis}"] * (-1 if invert else 1))
+            x = np.linspace(d[f"torque_{axis}"].min(), d[f"torque_{axis}"].max(), 100)
+            plt.plot(x, x * I_inv + intercept, color="red")
+            plt.title(f"I_{axis}: {I}")
+            plt.show()
+        return I
+    I_x_inv = moment_of_inertia("x", plot=True)
+    I_y_inv = moment_of_inertia("y", plot=True)
+    return (1/I_x_inv, 1/I_y_inv)
+
+plot_preproc = False
+
+logfile_input_up_and_down = "sysid/logs/log_45_2023-12-13-21-07-46.ulg" # up and down
+merged_df_0 = load_file(logfile_input_up_and_down, plot=plot_preproc)
+time_range_0 = (2, 1000)
+merged_timeframe_0 = get_timeframe(merged_df_0, *time_range_0, plot=plot_preproc)
+logfile_input_yang_sysid = "sysid/logs/log_60_2023-12-14-20-26-16.ulg" # yang sysid
+merged_df_1 = load_file(logfile_input_yang_sysid, plot=plot_preproc)
+time_range_1 = (1.5, 1000)
+merged_timeframe_1 = get_timeframe(merged_df_1, *time_range_1, plot=plot_preproc)
+
+merged_timeframes = [merged_timeframe_0, merged_timeframe_1]
+
+squared_throttle_lower_bound = 0.3
+best_tau = find_tau(merged_timeframes, plot=True, squared_throttle_lower_bound=squared_throttle_lower_bound)
+
+
+selected_tau = best_tau #0.04
+
+_, (found_slope, found_intercept) = throttle_thrust(selected_tau, merged_timeframes, squared_throttle_lower_bound=squared_throttle_lower_bound)
+print(f"Found slope: {found_slope}, Found intercept: {found_intercept}")
+plot_tau(selected_tau, merged_timeframes, best_model=[found_slope, found_intercept], squared_throttle_lower_bound=squared_throttle_lower_bound)
+
+plt.show()
+
+selected_slope = 35
+selected_intercept = 0
+
+
+
+plot_preproc = True
+logfile_input_angular = "sysid/logs/log_46_2023-12-13-21-08-08.ulg" # left and right
+merged_df_angular_0 = load_file(logfile_input_angular, plot=plot_preproc)
+time_range_angular_0 = (3, 19)
+merged_timeframe_angular_0 = get_timeframe(merged_df_angular_0, *time_range_angular_0, plot=plot_preproc)
+
+merged_timeframes_angular = [merged_timeframe_angular_0]
+
+found_I_x, found_I_y = find_inertia(merged_timeframes_angular, selected_tau, selected_slope, selected_intercept, plot=True)
