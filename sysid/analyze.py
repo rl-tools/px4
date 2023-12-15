@@ -342,3 +342,11 @@ merged_timeframe_angular_0 = get_timeframe(merged_df_angular_0, *time_range_angu
 merged_timeframes_angular = [merged_timeframe_angular_0]
 
 found_I_x, found_I_y = find_inertia(merged_timeframes_angular, selected_tau, selected_slope, selected_intercept, plot=True)
+
+merged_df_test_0 = load_file("sysid/logs/log_14_2023-12-15-14-49-46.ulg", plot=plot_preproc)
+find_col("rl", merged_df_test_0)
+merged_df_test_0.index.to_series().describe()
+merged_df_rl_tools_control = merged_df_test_0[[f"actuator_motors_rl_tools_control[{motor}]" for motor in range(4)]].dropna()
+for motor in range(4):
+    plt.plot(merged_df_rl_tools_control.index, merged_df_rl_tools_control[f"actuator_motors_rl_tools_control[{motor}]"], label=f"motor {motor}")
+plt.show()
