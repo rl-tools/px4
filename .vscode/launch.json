@@ -5,13 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Analyze",
+            "name": "sysid/analyze",
             "type": "python",
             "request": "launch",
-            "program": "analyze.py",
+            "program": "sysid/analyze.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "cwd": "${workspaceFolder}/sysid"
+            "cwd": "${workspaceFolder}"
         },
         {
             "name": "tools/external_position_reference/forward_ros_to_mavlink",
