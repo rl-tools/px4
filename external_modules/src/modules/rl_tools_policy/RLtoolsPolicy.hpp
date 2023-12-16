@@ -52,9 +52,17 @@ public:
 	int print_status() override;
 
 private:
-	uint32_t init_time;
 	using TI = typename rl_tools::checkpoint::actor::MODEL::CONTENT::SPEC::TI;
 	using T = typename rl_tools::checkpoint::actor::MODEL::CONTENT::SPEC::T;
+	enum class TestObservationMode: TI{
+		ANGULAR_VELOCITY = 0,
+		ORIENTATION = 1,
+		LINEAR_VELOCITY = 2,
+		POSITION = 3,
+		ACTION_HISTORY = 4,
+	};
+	static constexpr TestObservationMode TEST_OBSERVATION_MODE = TestObservationMode::ACTION_HISTORY; //TestObservationMode::ANGULAR_VELOCITY;
+	uint32_t init_time;
 	// node constants
 	static constexpr TI OBSERVATION_TIMEOUT_ANGULAR_VELOCITY = 10 * 1000;
 	static constexpr TI OBSERVATION_TIMEOUT_POSITION = 100 * 1000;
@@ -96,8 +104,8 @@ private:
 	static constexpr TI BATCH_SIZE = decltype(rl_tools::checkpoint::observation::container)::ROWS;
 
 	template <typename OBS_SPEC>
-	void observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation);
-	void rl_tools_control(TI substep);
+	void observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, TestObservationMode mode = TestObservationMode::ACTION_HISTORY);
+	void rl_tools_control(TI substep, TestObservationMode mode = TestObservationMode::ACTION_HISTORY);
 
 	static_assert(BATCH_SIZE == 1);
 	static constexpr TI CONTROL_INTERVAL = 2000; // 500Hz

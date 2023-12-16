@@ -1,6 +1,6 @@
 #include "actuator_motors_multiplexer.hpp"
 
-ActuatorMotorsMultiplexer::ActuatorMotorsMultiplexer() : ModuleParams(nullptr), ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::rate_ctrl) {
+ActuatorMotorsMultiplexer::ActuatorMotorsMultiplexer() : ModuleParams(nullptr), ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::test1) {
 	last_rl_tools_output_time_set = false;
 	last_rc_update_time_set = false;
 	use_original_controller = true;
@@ -16,7 +16,7 @@ ActuatorMotorsMultiplexer::~ActuatorMotorsMultiplexer()
 
 bool ActuatorMotorsMultiplexer::init()
 {
-	ScheduleOnInterval(2000_us); // 2000 us interval, 200 Hz rate
+	// ScheduleOnInterval(2000_us); // 2000 us interval, 200 Hz rate
 	this->init_time = hrt_absolute_time();
 
 	if (!_actuator_motors_sub.registerCallback()) {

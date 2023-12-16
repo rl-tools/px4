@@ -39,7 +39,7 @@ RLtoolsPolicy::~RLtoolsPolicy()
 bool RLtoolsPolicy::init()
 {
 	this->init_time = hrt_absolute_time();
-	ScheduleOnInterval(500_us); // 2000 us interval, 200 Hz rate
+	// ScheduleOnInterval(500_us); // 2000 us interval, 200 Hz rate
 	if (!_vehicle_local_position_sub.registerCallback()) {
 		PX4_ERR("vehicle_local_position_sub callback registration failed");
 		return false;
@@ -75,17 +75,27 @@ bool RLtoolsPolicy::init()
 	return abs_error < EPSILON;
 }
 template <typename OBS_SPEC>
-void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation){
+void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, TestObservationMode mode){
 	// converting from FRD to FLU
     static_assert(OBS_SPEC::ROWS == 1);
     static_assert(OBS_SPEC::COLS == 18);
-    float qw = +_vehicle_attitude.q[0];
-    float qx = +_vehicle_attitude.q[1];
-    float qy = -_vehicle_attitude.q[2];
-    float qz = -_vehicle_attitude.q[3];
-    rlt::set(observation, 0,  0 + 0, +(_vehicle_local_position.x - _rl_tools_command.target_position[0]));
-    rlt::set(observation, 0,  0 + 1, -(_vehicle_local_position.y - _rl_tools_command.target_position[1]));
-    rlt::set(observation, 0,  0 + 2, -(_vehicle_local_position.z - _rl_tools_command.target_position[2]));
+	float qw = 1, qx = 0, qy = 0, qz = 0;
+	if(mode >= TestObservationMode::ORIENTATION){
+		qw = +_vehicle_attitude.q[0];
+		qx = +_vehicle_attitude.q[1];
+		qy = -_vehicle_attitude.q[2];
+		qz = -_vehicle_attitude.q[3];
+	}
+	if(mode >= TestObservationMode::POSITION){
+		rlt::set(observation, 0,  0 + 0, +(_vehicle_local_position.x - _rl_tools_command.target_position[0]));
+		rlt::set(observation, 0,  0 + 1, -(_vehicle_local_position.y - _rl_tools_command.target_position[1]));
+		rlt::set(observation, 0,  0 + 2, -(_vehicle_local_position.z - _rl_tools_command.target_position[2]));
+	}
+	else{
+		rlt::set(observation, 0,  0 + 0, 0);
+		rlt::set(observation, 0,  0 + 1, 0);
+		rlt::set(observation, 0,  0 + 2, 0);
+	}
     rlt::set(observation, 0,  3 + 0, (1 - 2*qy*qy - 2*qz*qz));
     rlt::set(observation, 0,  3 + 1, (    2*qx*qy - 2*qw*qz));
     rlt::set(observation, 0,  3 + 2, (    2*qx*qz + 2*qw*qy));
@@ -95,16 +105,31 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation){
     rlt::set(observation, 0,  3 + 6, (    2*qx*qz - 2*qw*qy));
     rlt::set(observation, 0,  3 + 7, (    2*qy*qz + 2*qw*qx));
     rlt::set(observation, 0,  3 + 8, (1 - 2*qx*qx - 2*qy*qy));
-    rlt::set(observation, 0, 12 + 0, +_vehicle_local_position.vx);
-    rlt::set(observation, 0, 12 + 1, -_vehicle_local_position.vy);
-    rlt::set(observation, 0, 12 + 2, -_vehicle_local_position.vz);
-    rlt::set(observation, 0, 15 + 0, +_vehicle_angular_velocity.xyz[0]);
-    rlt::set(observation, 0, 15 + 1, -_vehicle_angular_velocity.xyz[1]);
-    rlt::set(observation, 0, 15 + 2, -_vehicle_angular_velocity.xyz[2]);
+	if(mode >= TestObservationMode::LINEAR_VELOCITY){
+		rlt::set(observation, 0, 12 + 0, +_vehicle_local_position.vx);
+		rlt::set(observation, 0, 12 + 1, -_vehicle_local_position.vy);
+		rlt::set(observation, 0, 12 + 2, -_vehicle_local_position.vz);
+	}
+	else{
+		rlt::set(observation, 0, 12 + 0, 0);
+		rlt::set(observation, 0, 12 + 1, 0);
+		rlt::set(observation, 0, 12 + 2, 0);
+	}
+	if(mode >= TestObservationMode::ANGULAR_VELOCITY){
+		rlt::set(observation, 0, 15 + 0, +_vehicle_angular_velocity.xyz[0]);
+		rlt::set(observation, 0, 15 + 1, -_vehicle_angular_velocity.xyz[1]);
+		rlt::set(observation, 0, 15 + 2, -_vehicle_angular_velocity.xyz[2]);
+	}
+	else{
+		rlt::set(observation, 0, 15 + 0, 0);
+		rlt::set(observation, 0, 15 + 1, 0);
+		rlt::set(observation, 0, 15 + 2, 0);
+
+	}
 }
-void RLtoolsPolicy::rl_tools_control(TI substep){
+void RLtoolsPolicy::rl_tools_control(TI substep, TestObservationMode mode){
     auto state_rotation_matrix_input = rlt::view(device, input, rlt::matrix::ViewSpec<1, 18>{}, 0, 0);
-    observe_rotation_matrix(state_rotation_matrix_input);
+    observe_rotation_matrix(state_rotation_matrix_input, mode);
     auto action_history_observation = rlt::view(device, input, rlt::matrix::ViewSpec<1, ACTION_HISTORY_LENGTH * rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM>{}, 0, 18);
     for(TI step_i = 0; step_i < ACTION_HISTORY_LENGTH; step_i++){
         for(TI action_i = 0; action_i < rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM; action_i++){
@@ -112,6 +137,9 @@ void RLtoolsPolicy::rl_tools_control(TI substep){
         }
     }
     rlt::evaluate(device, rl_tools::checkpoint::actor::model, input, output, buffers);
+	// for(TI action_i = 0; action_i < rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM; action_i++){
+	// 	set(output, 0, action_i, 0.1);
+	// }
     if(substep == 0){
         for(TI step_i = 0; step_i < ACTION_HISTORY_LENGTH - 1; step_i++){
             for(TI action_i = 0; action_i < rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM; action_i++){
@@ -143,9 +171,11 @@ void RLtoolsPolicy::Run()
 	perf_begin(_loop_perf);
 	uint32_t current_time = hrt_absolute_time();
 
+	bool ang_vel_update = false;
 	if(_vehicle_angular_velocity_sub.update(&_vehicle_angular_velocity)){
 		timestamp_last_angular_velocity = current_time;
 		timestamp_last_angular_velocity_set = true;
+		ang_vel_update = true;
 	}
 	if(_vehicle_local_position_sub.update(&_vehicle_local_position)){
 		timestamp_last_local_position = current_time;
@@ -159,13 +189,19 @@ void RLtoolsPolicy::Run()
 		timestamp_last_command = current_time;
 		timestamp_last_command_set = true;
 	}
+	_rl_tools_command.target_position[0] = 0;
+	_rl_tools_command.target_position[1] = 0;
+	_rl_tools_command.target_position[2] = 0.2;
 
 	if(_manual_control_input_sub.update(&_manual_control_input)) {
 		timestamp_last_manual_control_input_set = true;
 		timestamp_last_manual_control_input = current_time;
 	}
+	if(!ang_vel_update){
+		return;
+	}
 
-	if(!timestamp_last_angular_velocity_set || !timestamp_last_local_position_set || !timestamp_last_attitude_set || !timestamp_last_command_set || (SCALE_OUTPUT_WITH_THROTTLE && !timestamp_last_manual_control_input_set)){
+	if(!timestamp_last_angular_velocity_set || !timestamp_last_local_position_set || !timestamp_last_attitude_set || !timestamp_last_command_set || (SCALE_OUTPUT_WITH_THROTTLE && !timestamp_last_manual_control_input_set && false)){
 		return;
 	}
 
@@ -190,13 +226,13 @@ void RLtoolsPolicy::Run()
 		}
 		return;
 	}
-	if((current_time - timestamp_last_command) > COMMAND_TIMEOUT){
-		if(!timeout_message_sent){
-			PX4_ERR("command timeout");
-			timeout_message_sent = true;
-		}
-		return;
-	}
+	// if((current_time - timestamp_last_command) > COMMAND_TIMEOUT){
+	// 	if(!timeout_message_sent){
+	// 		PX4_ERR("command timeout");
+	// 		timeout_message_sent = true;
+	// 	}
+	// 	return;
+	// }
 	if(SCALE_OUTPUT_WITH_THROTTLE && ((current_time - timestamp_last_manual_control_input) > MANUAL_CONTROL_TIMEOUT)){
 		if(!timeout_message_sent){
 			PX4_ERR("manual control input timeout");
@@ -215,13 +251,14 @@ void RLtoolsPolicy::Run()
 	}
 
     TI substep = controller_tick % CONTROL_MULTIPLE;
-	rl_tools_control(substep);
+	rl_tools_control(substep, TEST_OBSERVATION_MODE);
 
 	controller_tick++;
 	timestamp_last_forward_pass = current_time;
 	timestamp_last_forward_pass_set = true;
 
 	actuator_motors_s actuator_motors;
+	actuator_motors.timestamp = hrt_absolute_time();
 	actuator_motors.timestamp_sample = hrt_absolute_time();
 	for(TI action_i=0; action_i < actuator_motors_s::NUM_CONTROLS; action_i++){
 		if(action_i < rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM){
@@ -237,13 +274,15 @@ void RLtoolsPolicy::Run()
 	}
 	_actuator_motors_rl_tools_pub.publish(actuator_motors);
 	if constexpr(MAKE_SOME_NOISE){
-		tune_control_s tune_control;
-		tune_control.tune_id = 0;
-		tune_control.volume = tune_control_s::VOLUME_LEVEL_DEFAULT;
-		tune_control.tune_override = true;
-		tune_control.frequency = 2000;
-		tune_control.duration = 5000;
-		_tune_control_pub.publish(tune_control);
+		if(controller_tick % CONTROL_MULTIPLE * 5 == 0){
+			tune_control_s tune_control;
+			tune_control.tune_id = 0;
+			tune_control.volume = 100; //tune_control_s::VOLUME_LEVEL_DEFAULT;
+			tune_control.tune_override = true;
+			tune_control.frequency = 2000;
+			tune_control.duration = 10000;
+			_tune_control_pub.publish(tune_control);
+		}
 
 	}
 	perf_end(_loop_perf);
