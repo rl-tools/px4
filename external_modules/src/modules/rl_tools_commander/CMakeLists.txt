@@ -9,6 +9,4 @@ px4_add_module(
 	EXTERNAL
 	)
 
-
-
-
+target_compile_features(modules__rl_tools_commander PRIVATE cxx_std_17)

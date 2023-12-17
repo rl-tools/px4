@@ -38,6 +38,7 @@ public:
 
 private:
 	void Run() override;
+	static constexpr bool DEACTIVATE_OUTPUTS_AFTER_ACTIVATION = true;
 	uORB::Subscription _manual_control_input_sub{ORB_ID(manual_control_input)};
 	uORB::SubscriptionCallbackWorkItem _actuator_motors_sub{this, ORB_ID(actuator_motors)};
 	uORB::SubscriptionCallbackWorkItem _actuator_motors_rl_tools_sub{this, ORB_ID(actuator_motors_rl_tools)};

@@ -27,10 +27,12 @@ rotor_positions = np.array([
 ])
 
 def load_file(logfile_input, plot=False):
-    retval = subprocess.run(["ulog2csv", logfile_input, "-o", f"sysid/logs_csv/{os.path.split(logfile_input)[-1]}"])
+    timestamp = time.time()
+    csv_path = f"sysid/logs_csv/{os.path.split(logfile_input)[-1]}_{timestamp}"
+    retval = subprocess.run(["ulog2csv", logfile_input, "-o", csv_path])
     assert(retval.returncode == 0)
 
-    logfile = os.path.join("sysid", "logs_csv", os.path.split(logfile_input)[-1])
+    logfile = csv_path
     dfs = {}
 
     for file in os.listdir(logfile):
@@ -60,7 +62,7 @@ def load_file(logfile_input, plot=False):
     merged_df.set_index('timestamp', inplace=True)
 
     if plot:
-        plt.plot(merged_df.index.to_series().diff().dropna())
+        plt.plot(merged_df.index.to_series().diff().dropna().apply(lambda x: x.total_seconds())[1:])
         plt.show()
     return merged_df
 
@@ -305,48 +307,90 @@ def find_inertia(merged_timeframes, selected_tau, selected_slope, selected_inter
 
 plot_preproc = False
 
-logfile_input_up_and_down = "sysid/logs/log_45_2023-12-13-21-07-46.ulg" # up and down
-merged_df_0 = load_file(logfile_input_up_and_down, plot=plot_preproc)
-time_range_0 = (2, 1000)
-merged_timeframe_0 = get_timeframe(merged_df_0, *time_range_0, plot=plot_preproc)
-logfile_input_yang_sysid = "sysid/logs/log_60_2023-12-14-20-26-16.ulg" # yang sysid
+# logfile_input_up_and_down = "sysid/logs/2023-12-13-nishanth-sysid/log_45_2023-12-13-21-07-46-up-and-down.ulg" # up and down
+# merged_df_0 = load_file(logfile_input_up_and_down, plot=plot_preproc)
+# time_range_0 = (2, 1000)
+# merged_timeframe_0 = get_timeframe(merged_df_0, *time_range_0, plot=plot_preproc)
+logfile_input_yang_sysid = "sysid/logs/2023-12-14-yang-crash/log_60_2023-12-14-20-26-16.ulg" # yang sysid
 merged_df_1 = load_file(logfile_input_yang_sysid, plot=plot_preproc)
-time_range_1 = (1.5, 1000)
-merged_timeframe_1 = get_timeframe(merged_df_1, *time_range_1, plot=plot_preproc)
+# time_range_1 = (1.5, 1000)
+# merged_timeframe_1 = get_timeframe(merged_df_1, *time_range_1, plot=plot_preproc)
 
-merged_timeframes = [merged_timeframe_0, merged_timeframe_1]
+# merged_timeframes = [merged_timeframe_0, merged_timeframe_1]
 
-squared_throttle_lower_bound = 0.3
-best_tau = find_tau(merged_timeframes, plot=True, squared_throttle_lower_bound=squared_throttle_lower_bound)
+# squared_throttle_lower_bound = 0.3
+# best_tau = find_tau(merged_timeframes, plot=True, squared_throttle_lower_bound=squared_throttle_lower_bound)
 
 
-selected_tau = best_tau #0.04
+# selected_tau = best_tau #0.04
 
-_, (found_slope, found_intercept) = throttle_thrust(selected_tau, merged_timeframes, squared_throttle_lower_bound=squared_throttle_lower_bound)
-print(f"Found slope: {found_slope}, Found intercept: {found_intercept}")
-plot_tau(selected_tau, merged_timeframes, best_model=[found_slope, found_intercept], squared_throttle_lower_bound=squared_throttle_lower_bound)
+# _, (found_slope, found_intercept) = throttle_thrust(selected_tau, merged_timeframes, squared_throttle_lower_bound=squared_throttle_lower_bound)
+# print(f"Found slope: {found_slope}, Found intercept: {found_intercept}")
+# plot_tau(selected_tau, merged_timeframes, best_model=[found_slope, found_intercept], squared_throttle_lower_bound=squared_throttle_lower_bound)
 
+# plt.show()
+
+# selected_slope = 35
+# selected_intercept = 0
+
+
+
+# plot_preproc = True
+# logfile_input_angular = "sysid/logs/2023-12-13-nishanth-sysid/log_46_2023-12-13-21-08-08-left-and-right.ulg" # left and right
+# merged_df_angular_0 = load_file(logfile_input_angular, plot=plot_preproc)
+# time_range_angular_0 = (3, 19)
+# merged_timeframe_angular_0 = get_timeframe(merged_df_angular_0, *time_range_angular_0, plot=plot_preproc)
+
+# merged_timeframes_angular = [merged_timeframe_angular_0]
+
+# found_I_x, found_I_y = find_inertia(merged_timeframes_angular, selected_tau, selected_slope, selected_intercept, plot=True)
+
+# merged_df_test_0 = load_file("sysid/logs/log_14_2023-12-15-14-49-46.ulg", plot=plot_preproc)
+# merged_df_test_0 = load_file("sysid/logs/log_15_2023-12-15-15-25-40.ulg", plot=plot_preproc)
+# merged_df_test_0 = load_file("sysid/logs/log_16_2023-12-15-15-33-22.ulg", plot=plot_preproc)
+# merged_df_test_0 = load_file("sysid/logs/log_19_2023-12-15-15-46-50.ulg", plot=plot_preproc)
+merged_df_test_0 = load_file("sysid/logs/log_26_2023-12-15-16-43-56.ulg", plot=plot_preproc)
+find_col("actuator", merged_df_test_0)
+merged_df_test_0.index.to_series().describe()
+# motors_topic = "actuator_motors_rl_tools_control"
+motors_topic = "actuator_motors_control"
+merged_df_rl_tools_control = merged_df_test_0[[f"{motors_topic}[{motor}]" for motor in range(4)]].dropna()
+for motor in range(4):
+    plt.plot(merged_df_rl_tools_control.index, merged_df_rl_tools_control[f"{motors_topic}[{motor}]"], label=f"motor {motor}")
 plt.show()
 
-selected_slope = 35
-selected_intercept = 0
+
+data = pd.read_csv("sysid/logs_csv/log_17_2023-12-15-15-39-16.ulg/log_17_2023-12-15-15-39-16_actuator_motors_0.csv")
+data = pd.read_csv("sysid/logs_csv/log_21_2023-12-15-16-23-02.ulg/log_21_2023-12-15-16-23-02_actuator_motors_0.csv")
+find_col("timestamp", data)
+plt.plot(data["timestamp_sample"], data["timestamp_sample"].diff())
+plt.plot(data["timestamp_sample"], data[""].diff())
+plt.show()
 
 
+df = load_file("sysid/logs/log_13_2023-12-16-23-14-12.ulg", plot=plot_preproc)
+for col in df.columns:
+    if "position" in col:
+        print(col)
 
-plot_preproc = True
-logfile_input_angular = "sysid/logs/log_46_2023-12-13-21-08-08.ulg" # left and right
-merged_df_angular_0 = load_file(logfile_input_angular, plot=plot_preproc)
-time_range_angular_0 = (3, 19)
-merged_timeframe_angular_0 = get_timeframe(merged_df_angular_0, *time_range_angular_0, plot=plot_preproc)
 
-merged_timeframes_angular = [merged_timeframe_angular_0]
-
-found_I_x, found_I_y = find_inertia(merged_timeframes_angular, selected_tau, selected_slope, selected_intercept, plot=True)
-
-merged_df_test_0 = load_file("sysid/logs/log_14_2023-12-15-14-49-46.ulg", plot=plot_preproc)
-find_col("rl", merged_df_test_0)
-merged_df_test_0.index.to_series().describe()
-merged_df_rl_tools_control = merged_df_test_0[[f"actuator_motors_rl_tools_control[{motor}]" for motor in range(4)]].dropna()
 for motor in range(4):
-    plt.plot(merged_df_rl_tools_control.index, merged_df_rl_tools_control[f"actuator_motors_rl_tools_control[{motor}]"], label=f"motor {motor}")
+    plt.plot(df[f"actuator_motors_rl_tools_control[{motor}]"].dropna())
+plt.show()
+
+
+df_so = df[[*[f"rl_tools_policy_status_state_observation[{axis_i}]" for axis_i in range(3)], "rl_tools_policy_status_exit_reason", "rl_tools_policy_status_command_stale"]].dropna()
+df_so = df_so[df_so["rl_tools_policy_status_exit_reason"] == 0]
+df_so = df_so.dropna()
+
+other_axis = plt.twinx()
+other_axis.plot(df_so.index, df_so["rl_tools_policy_status_command_stale"], label="rl_tools_policy_status_command_stale")
+for axis_i, axis_name in enumerate(["x", "y", "z"]):
+    plt.plot(df_so[f"rl_tools_policy_status_state_observation[{axis_i}]"], label=f"rl_tools_policy_status_state_observation[{axis_name}]")
+# for motor in range(4):
+#     plt.plot(df[f"actuator_motors_rl_tools_control[{motor}]"].dropna(), label=f"actuator_motors_rl_tools_control[{motor}]")
+# for motor in range(4):
+#     plt.plot(df[f"actuator_motors_control[{motor}]"].dropna(), label=f"actuator_motors_control[{motor}]")
+# plt.plot(df["vehicle_local_position_z"].dropna(), label="vehicle_local_position_z")
+plt.legend()
 plt.show()

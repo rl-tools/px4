@@ -8,6 +8,9 @@ RLtoolsCommander::RLtoolsCommander() : ModuleParams(nullptr), ScheduledWorkItem(
 	activation_position[1] = 1;
 	activation_position[2] = 2;
 	_rl_tools_command_pub.advertise();
+	if constexpr(MAKE_SOME_NOISE){
+		_tune_control_pub.advertise();
+	}
 }
 
 RLtoolsCommander::~RLtoolsCommander(){
@@ -64,14 +67,25 @@ void RLtoolsCommander::Run()
 		next_command_active = false;
 	}
 	if(prev_command_active != next_command_active){
-		if(next_command_active){ // Jonas said it's not working. What should we do? Go Home!!!!!!!
+		if(next_command_active){ 
 			PX4_INFO("Command enabled");
 			activation_position[0] = vehicle_local_position.x;
 			activation_position[1] = vehicle_local_position.y;
-			activation_position[2] = vehicle_local_position.z;
+			activation_position[2] = vehicle_local_position.z - TARGET_HEIGHT; // FRD
 		}
 		else{
 			PX4_INFO("Command disabled");
+		}
+	}
+	if constexpr(MAKE_SOME_NOISE){
+		if(next_command_active){
+			tune_control_s tune_control;
+			tune_control.tune_id = 0;
+			tune_control.volume = 100; //tune_control_s::VOLUME_LEVEL_DEFAULT;
+			tune_control.tune_override = true;
+			tune_control.frequency = 2000;
+			tune_control.duration = 10000;
+			_tune_control_pub.publish(tune_control);
 		}
 	}
 
@@ -79,6 +93,8 @@ void RLtoolsCommander::Run()
 
 	if(command_active){
 		rl_tools_command_s command;
+		command.timestamp = current_time;
+		command.timestamp_sample = current_time;
 		command.target_position[0] = activation_position[0];
 		command.target_position[1] = activation_position[1];
 		command.target_position[2] = activation_position[2];
