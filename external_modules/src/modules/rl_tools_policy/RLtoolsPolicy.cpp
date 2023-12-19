@@ -122,8 +122,8 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, 
 		T vy = -_vehicle_local_position.vy;
 		T vz = -_vehicle_local_position.vz;
 		rlt::set(observation, 0, 12 + 0, clip(vx, MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
-		rlt::set(observation, 0, 12 + 1, clip(vx, MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
-		rlt::set(observation, 0, 12 + 2, clip(vx, MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
+		rlt::set(observation, 0, 12 + 1, clip(vy, MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
+		rlt::set(observation, 0, 12 + 2, clip(vz, MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
 	}
 	else{
 		rlt::set(observation, 0, 12 + 0, 0);
