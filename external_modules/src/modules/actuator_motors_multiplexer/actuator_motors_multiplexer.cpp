@@ -3,9 +3,12 @@
 ActuatorMotorsMultiplexer::ActuatorMotorsMultiplexer() : ModuleParams(nullptr), ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::test1) {
 	last_rl_tools_output_time_set = false;
 	last_rc_update_time_set = false;
+	last_activation_time_set = false;
 	use_original_controller = true;
+	deactivated = false;
 
 	_actuator_motors_mux_pub.advertise();
+	_rl_tools_multiplexer_status_pub.advertise();
 }
 
 ActuatorMotorsMultiplexer::~ActuatorMotorsMultiplexer()
@@ -46,7 +49,6 @@ void ActuatorMotorsMultiplexer::Run()
 	bool next_use_original_controller = this->use_original_controller;
 
 	{
-		manual_control_setpoint_s manual_control_input;
 		if(_manual_control_input_sub.update(&manual_control_input)) {
 			last_rc_update_time_set = true;
 			last_rc_update_time = current_time;
@@ -58,17 +60,46 @@ void ActuatorMotorsMultiplexer::Run()
 	constexpr uint32_t RC_TRIGGER_TIMEOUT = 2000*1000; // 200ms timeout
 	next_use_original_controller = next_use_original_controller || !last_rl_tools_output_time_set || !last_rc_update_time_set;
 	if(last_rc_update_time_set && ((current_time - last_rc_update_time) > RC_TRIGGER_TIMEOUT)){
+		PX4_WARN("RC trigger timeout");
 		next_use_original_controller = true;
+		deactivated = true;
 	}
 	if(last_rl_tools_output_time_set && ((current_time - last_rl_tools_output_time) > RL_TOOLS_CONTROLLER_TIMEOUT)){
 		next_use_original_controller = true;
 	}
 	if(prev_use_original_controller != next_use_original_controller){
 		if(next_use_original_controller){
-			PX4_INFO("Switching to original controller");
+			if(!deactivated){
+				switch(MODE){
+					case Mode::SWITCH_BACK:
+						PX4_INFO("Switching to original controller");
+						break;
+					case Mode::TURN_OFF:
+						PX4_INFO("Turning off");
+						deactivated = true;
+						break;
+					case Mode::TURN_OFF_AFTER_TIMEOUT:
+						PX4_INFO("Turning off (after button release)");
+						deactivated = true;
+						break;
+					default:
+						PX4_INFO("Turning off (unknown mode)");
+						deactivated = true;
+						break;
+				}
+			}
 		}
 		else{
 			PX4_INFO("Switching to RLtools controller");
+			last_activation_time = current_time;
+			last_activation_time_set = true;
+			deactivated = false;
+		}
+	}
+	if constexpr(MODE == Mode::TURN_OFF_AFTER_TIMEOUT){
+		if(!prev_use_original_controller && last_activation_time_set && ((current_time - last_activation_time) > SWITCH_BACK_TIMEOUT) && !deactivated){
+			PX4_INFO("Turning off after timeout");
+			deactivated = true;
 		}
 	}
 
@@ -84,15 +115,56 @@ void ActuatorMotorsMultiplexer::Run()
 		last_rl_tools_output_time = current_time;
 		actuator_motors_rl_tools_set = true;
 	}
+    actuator_motors_s actuator_motors_mux;
+	bool actuator_motors_mux_set = false;
 	if(this->use_original_controller){
 		if(actuator_motors_set){
-			_actuator_motors_mux_pub.publish(actuator_motors);
+			actuator_motors_mux = actuator_motors;
+			actuator_motors_mux_set	= true;
 		}
 	}
 	else{
 		if(actuator_motors_rl_tools_set){
-			_actuator_motors_mux_pub.publish(actuator_motors_rl_tools);
+			actuator_motors_mux = actuator_motors_rl_tools;
+			float multiplier = 0.5;
+			for(int control_i = 0; control_i < actuator_motors_s::NUM_CONTROLS; control_i++){
+				if(std::isnan(actuator_motors_mux.control[control_i])){
+					actuator_motors_mux.control[control_i] *= multiplier;
+				}
+			}
+			actuator_motors_mux_set	= true;
 		}
+	}
+	if(deactivated && actuator_motors_mux_set){
+		for(int i = 0; i < actuator_motors_s::NUM_CONTROLS; i++){
+			actuator_motors_mux.control[i] = NAN;
+		}	
+	}
+	if(actuator_motors_mux_set){
+		if constexpr(SCALE_OUTPUT_WITH_THROTTLE){
+			for(int i = 0; i < actuator_motors_s::NUM_CONTROLS; i++){
+				if(last_rc_update_time_set && ((current_time - last_rc_update_time) < RC_TRIGGER_TIMEOUT)){
+					float multiplier = (manual_control_input.throttle + 1)/2;
+					multiplier = fmaxf(0, fminf(1, multiplier));
+					actuator_motors_mux.control[i] *= multiplier;
+				}
+				else{
+					// PX4_WARN("RC trigger timeout in scaling");
+					actuator_motors_mux.control[i] = NAN;
+				}
+			}	
+		}
+		for(int i = 0; i < actuator_motors_s::NUM_CONTROLS; i++){
+			if(!std::isnan(actuator_motors_mux.control[i])){
+				actuator_motors_mux.control[i] = fminf(0.5, actuator_motors_mux.control[i]);
+			}
+		}	
+		rl_tools_multiplexer_status_s status;
+		status.timestamp = current_time;
+		status.timestamp_sample = current_time;
+		status.active = !this->use_original_controller;
+		_actuator_motors_mux_pub.publish(actuator_motors_mux);
+		_rl_tools_multiplexer_status_pub.publish(status);
 	}
 	perf_count(_loop_interval_perf);
 

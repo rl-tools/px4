@@ -72,20 +72,20 @@ void RLtoolsCommander::Run()
 			activation_position[0] = vehicle_local_position.x;
 			activation_position[1] = vehicle_local_position.y;
 			activation_position[2] = vehicle_local_position.z - TARGET_HEIGHT; // FRD
+			if constexpr(MAKE_SOME_NOISE){
+				if(next_command_active){
+					tune_control_s tune_control;
+					tune_control.tune_id = 1;
+					tune_control.volume = 100; //tune_control_s::VOLUME_LEVEL_DEFAULT;
+					tune_control.tune_override = true;
+					tune_control.frequency = 2000;
+					tune_control.duration = 10000;
+					_tune_control_pub.publish(tune_control);
+				}
+			}
 		}
 		else{
 			PX4_INFO("Command disabled");
-		}
-	}
-	if constexpr(MAKE_SOME_NOISE){
-		if(next_command_active){
-			tune_control_s tune_control;
-			tune_control.tune_id = 0;
-			tune_control.volume = 100; //tune_control_s::VOLUME_LEVEL_DEFAULT;
-			tune_control.tune_override = true;
-			tune_control.frequency = 2000;
-			tune_control.duration = 10000;
-			_tune_control_pub.publish(tune_control);
 		}
 	}
 

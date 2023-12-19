@@ -192,6 +192,9 @@ void RLtoolsPolicy::Run()
 	status.subscription_update = 0x0;
 	status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_NONE;
 	status.substep = 0;
+	for(TI so_i = 0; so_i < rl_tools_policy_status_s::STATE_OBSERVATION_DIM; so_i++){
+		status.state_observation[so_i] = NAN;
+	}
 
 	bool angular_velocity_update = false;
 	if(_vehicle_angular_velocity_sub.update(&_vehicle_angular_velocity)){
@@ -351,6 +354,7 @@ int RLtoolsPolicy::print_status()
 {
 	perf_print_counter(_loop_perf);
 	perf_print_counter(_loop_interval_perf);
+	PX4_INFO_RAW("Checkpoint: %s\n", rl_tools::checkpoint::meta::name);
 	return 0;
 }
 

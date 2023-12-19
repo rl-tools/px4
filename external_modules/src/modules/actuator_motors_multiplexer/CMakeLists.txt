@@ -9,6 +9,4 @@ px4_add_module(
 	EXTERNAL
 	)
 
-
-
-
+target_compile_features(modules__actuator_motors_multiplexer PRIVATE cxx_std_17)

@@ -19,5 +19,6 @@ bool command_stale
 
 uint8 substep
 
+uint8 STATE_OBSERVATION_DIM = 18
 float32[18] state_observation
 

@@ -1,2 +1,6 @@
 /sysid/logs_csv
 .vscode/settings.json
+
+/**/*.gif
+/**/*.png
+/**/*.ulg

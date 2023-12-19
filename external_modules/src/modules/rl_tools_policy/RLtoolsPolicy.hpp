@@ -60,7 +60,8 @@ private:
 		POSITION = 3,
 		ACTION_HISTORY = 4,
 	};
-	static constexpr TestObservationMode TEST_OBSERVATION_MODE = TestObservationMode::ACTION_HISTORY; //TestObservationMode::ANGULAR_VELOCITY;
+	// static constexpr TestObservationMode TEST_OBSERVATION_MODE = TestObservationMode::ANGULAR_VELOCITY;
+	static constexpr TestObservationMode TEST_OBSERVATION_MODE = TestObservationMode::ACTION_HISTORY;
 	uint32_t init_time;
 	// node constants
 	static constexpr TI OBSERVATION_TIMEOUT_ANGULAR_VELOCITY = 10 * 1000;
@@ -102,8 +103,8 @@ private:
 	static constexpr TI BATCH_SIZE = decltype(rl_tools::checkpoint::observation::container)::ROWS;
 
 	template <typename OBS_SPEC>
-	void observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, TestObservationMode mode = TestObservationMode::ACTION_HISTORY);
-	void rl_tools_control(TI substep, TestObservationMode mode = TestObservationMode::ACTION_HISTORY);
+	void observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, TestObservationMode mode);
+	void rl_tools_control(TI substep, TestObservationMode mode);
 
 	static_assert(BATCH_SIZE == 1);
 	// static constexpr TI CONTROL_INTERVAL = 2000; // 500Hz

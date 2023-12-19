@@ -39,7 +39,8 @@ def load_file(logfile_input, plot=False):
         if file.endswith('.csv'):
             file_path = os.path.join(logfile, file)
 
-            identifier = re.search(r'log_\d+_\d+-\d+-\d+-\d+-\d+-\d+_(.+?)_\d+\.csv', file)
+            input_file_name = os.path.split(os.path.splitext(logfile_input)[0])[-1]
+            identifier = re.search(f'{input_file_name}_(.+?)_\d+\.csv$', file)
             if identifier:
                 identifier = identifier.group(1)
 
@@ -307,31 +308,31 @@ def find_inertia(merged_timeframes, selected_tau, selected_slope, selected_inter
 
 plot_preproc = False
 
-# logfile_input_up_and_down = "sysid/logs/2023-12-13-nishanth-sysid/log_45_2023-12-13-21-07-46-up-and-down.ulg" # up and down
-# merged_df_0 = load_file(logfile_input_up_and_down, plot=plot_preproc)
-# time_range_0 = (2, 1000)
-# merged_timeframe_0 = get_timeframe(merged_df_0, *time_range_0, plot=plot_preproc)
+logfile_input_up_and_down = "sysid/logs/2023-12-13-nishanth-sysid/log_45_2023-12-13-21-07-46-up-and-down.ulg" # up and down
+merged_df_0 = load_file(logfile_input_up_and_down, plot=plot_preproc)
+time_range_0 = (2, 1000)
+merged_timeframe_0 = get_timeframe(merged_df_0, *time_range_0, plot=plot_preproc)
 logfile_input_yang_sysid = "sysid/logs/2023-12-14-yang-crash/log_60_2023-12-14-20-26-16.ulg" # yang sysid
 merged_df_1 = load_file(logfile_input_yang_sysid, plot=plot_preproc)
-# time_range_1 = (1.5, 1000)
-# merged_timeframe_1 = get_timeframe(merged_df_1, *time_range_1, plot=plot_preproc)
+time_range_1 = (1.5, 1000)
+merged_timeframe_1 = get_timeframe(merged_df_1, *time_range_1, plot=plot_preproc)
 
-# merged_timeframes = [merged_timeframe_0, merged_timeframe_1]
+merged_timeframes = [merged_timeframe_0, merged_timeframe_1]
 
-# squared_throttle_lower_bound = 0.3
-# best_tau = find_tau(merged_timeframes, plot=True, squared_throttle_lower_bound=squared_throttle_lower_bound)
+squared_throttle_lower_bound = 0.0
+best_tau = find_tau(merged_timeframes, plot=True, squared_throttle_lower_bound=squared_throttle_lower_bound)
 
 
-# selected_tau = best_tau #0.04
+selected_tau = best_tau #0.04
 
-# _, (found_slope, found_intercept) = throttle_thrust(selected_tau, merged_timeframes, squared_throttle_lower_bound=squared_throttle_lower_bound)
-# print(f"Found slope: {found_slope}, Found intercept: {found_intercept}")
-# plot_tau(selected_tau, merged_timeframes, best_model=[found_slope, found_intercept], squared_throttle_lower_bound=squared_throttle_lower_bound)
+_, (found_slope, found_intercept) = throttle_thrust(selected_tau, merged_timeframes, squared_throttle_lower_bound=squared_throttle_lower_bound)
+print(f"Found slope: {found_slope}, Found intercept: {found_intercept}")
+plot_tau(selected_tau, merged_timeframes, best_model=[found_slope, found_intercept], squared_throttle_lower_bound=squared_throttle_lower_bound)
 
-# plt.show()
+plt.show()
 
-# selected_slope = 35
-# selected_intercept = 0
+selected_slope = 52
+selected_intercept = 0
 
 
 
@@ -364,33 +365,53 @@ data = pd.read_csv("sysid/logs_csv/log_17_2023-12-15-15-39-16.ulg/log_17_2023-12
 data = pd.read_csv("sysid/logs_csv/log_21_2023-12-15-16-23-02.ulg/log_21_2023-12-15-16-23-02_actuator_motors_0.csv")
 find_col("timestamp", data)
 plt.plot(data["timestamp_sample"], data["timestamp_sample"].diff())
-plt.plot(data["timestamp_sample"], data[""].diff())
+# plt.plot(data["timestamp_sample"], data[""].diff())
 plt.show()
 
 
-df = load_file("sysid/logs/log_13_2023-12-16-23-14-12.ulg", plot=plot_preproc)
+# df = load_file("sysid/logs/log_15_2023-12-16-23-19-56.ulg", plot=plot_preproc)
+df = load_file("sysid/logs/log_118_2023-12-18-19-26-00.ulg", plot=plot_preproc)
 for col in df.columns:
-    if "position" in col:
+    if "rl_tools" in col:
         print(col)
 
 
-for motor in range(4):
-    plt.plot(df[f"actuator_motors_rl_tools_control[{motor}]"].dropna())
-plt.show()
+# for motor in range(4):
+#     series = df[f"actuator_motors_rl_tools_control[{motor}]"].dropna()
+#     plt.scatter(series.index, series, s=1.0)
+# plt.show()
 
 
-df_so = df[[*[f"rl_tools_policy_status_state_observation[{axis_i}]" for axis_i in range(3)], "rl_tools_policy_status_exit_reason", "rl_tools_policy_status_command_stale"]].dropna()
-df_so = df_so[df_so["rl_tools_policy_status_exit_reason"] == 0]
-df_so = df_so.dropna()
+df_so = df[df["rl_tools_policy_status_exit_reason"] == 0]
 
-other_axis = plt.twinx()
-other_axis.plot(df_so.index, df_so["rl_tools_policy_status_command_stale"], label="rl_tools_policy_status_command_stale")
+fig, (ax_policy_active, ax_policy_exit, ax_command_stale, ax_position_observation, ax_motor_output_rl_tools, ax_motor_output_orig, ax_motor_output_real) = plt.subplots(7, 1, sharex=True)
+active_series = df["rl_tools_multiplexer_status_active"].dropna()
+ax_policy_active.scatter(active_series.index, active_series)
+ax_policy_active.set_title("rl_tools_multiplexer_status_active")
+exit_series = df[df["rl_tools_policy_status_exit_reason"] == 0]
+ax_policy_exit.scatter(exit_series.index, np.ones(len(exit_series.index)), label="policy active")
+ax_policy_exit.set_title("rl_tools_policy_status_no_exit")
+ax_command_stale.plot(df_so.index, df_so["rl_tools_policy_status_command_stale"], label="rl_tools_policy_status_command_stale")
+ax_command_stale.set_title("rl_tools_policy_status_command_stale")
 for axis_i, axis_name in enumerate(["x", "y", "z"]):
-    plt.plot(df_so[f"rl_tools_policy_status_state_observation[{axis_i}]"], label=f"rl_tools_policy_status_state_observation[{axis_name}]")
-# for motor in range(4):
-#     plt.plot(df[f"actuator_motors_rl_tools_control[{motor}]"].dropna(), label=f"actuator_motors_rl_tools_control[{motor}]")
-# for motor in range(4):
-#     plt.plot(df[f"actuator_motors_control[{motor}]"].dropna(), label=f"actuator_motors_control[{motor}]")
-# plt.plot(df["vehicle_local_position_z"].dropna(), label="vehicle_local_position_z")
-plt.legend()
+    ax_position_observation.plot(df_so[f"rl_tools_policy_status_state_observation[{axis_i}]"], label=f"rl_tools_policy_status_state_observation[{axis_name}]")
+    # plt.plot(df[f"vehicle_angular_velocity_xyz[{axis_i}]"].dropna(), label=f"vehicle_angular_velocity_xyz[{axis_i}]")
+    print(f"Angular rate noise std ({axis_name}-axis): {df[f'vehicle_angular_velocity_xyz[{axis_i}]'].dropna().std()}")
+# for axis_i, axis_name in enumerate(["qw", "qx", "qy", "qz"]):
+#     plt.plot(df_so[f"rl_tools_policy_status_state_observation[{axis_i+3}]"].dropna(), label=f"rl_tools_policy_status_state_observation[{axis_name}]")
+ax_position_observation.legend()
+ax_position_observation.set_title("rl_tools_policy_status_state_observation")
+
+for motor in range(4):
+    ax_motor_output_rl_tools.plot(df[f"actuator_motors_rl_tools_control[{motor}]"].dropna(), label=f"actuator_motors_rl_tools_control[{motor}]")
+ax_motor_output_rl_tools.set_title("actuator_motors_rl_tools_control")
+ax_motor_output_rl_tools.legend()
+for motor in range(4):
+    ax_motor_output_orig.plot(df[f"actuator_motors_control[{motor}]"].dropna(), label=f"actuator_motors_control[{motor}]")
+ax_motor_output_orig.set_title("actuator_motors_control")
+ax_motor_output_orig.legend()
+for motor in range(4):
+    ax_motor_output_real.plot(df[f"actuator_motors_mux_control[{motor}]"].dropna(), label=f"actuator_motors_mux_control[{motor}]")
+ax_motor_output_real.set_title("actuator_motors_mux_control")
+ax_motor_output_real.legend()
 plt.show()

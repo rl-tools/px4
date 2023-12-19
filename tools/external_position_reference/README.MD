@@ -15,3 +15,8 @@ The modified vicon.launch includes the ros websocket bridge
 ```
 python3 forward_ros_to_mavlink.py
 ```
+
+
+Set `EKF2_HGT_REF` to `Vision`
+Set `EKF2_MAG_TYPE` to `None`
+Set `EKF2_EV_CTRL` to `11`
