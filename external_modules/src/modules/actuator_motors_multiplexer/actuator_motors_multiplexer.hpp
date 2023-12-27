@@ -61,6 +61,7 @@ private:
 	bool last_rl_tools_output_time_set = false, last_rc_update_time_set = false, last_activation_time_set = false;
 	bool use_original_controller = true;
 	bool deactivated = false;
+	bool overwrite = false;
 
 	// Performance (perf) counters
 	perf_counter_t	_loop_perf{perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")};

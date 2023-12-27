@@ -47,14 +47,15 @@ private:
 
 	static constexpr bool MAKE_SOME_NOISE = true;
 	static constexpr bool SCALE_OUTPUT_WITH_THROTTLE = true;
-	static constexpr float TARGET_HEIGHT = 0.0;
-	// static constexpr float TARGET_HEIGHT = 0.2;
+	static constexpr float DEFAULT_TARGET_HEIGHT = 0.0;
 
 	uint32_t last_rc_update_time, last_position_update_time;
 	vehicle_local_position_s vehicle_local_position;
 	bool last_rc_update_time_set = false, last_position_update_time_set = false;
 	float activation_position[3] = {0, 0, 0};
 	bool command_active = false;
+	float target_height = DEFAULT_TARGET_HEIGHT;
+	bool overwrite = false;
 
 	perf_counter_t	_loop_interval_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": interval")};
 };

@@ -11,6 +11,8 @@ RLtoolsCommander::RLtoolsCommander() : ModuleParams(nullptr), ScheduledWorkItem(
 	if constexpr(MAKE_SOME_NOISE){
 		_tune_control_pub.advertise();
 	}
+	target_height = DEFAULT_TARGET_HEIGHT;
+	overwrite = false;
 }
 
 RLtoolsCommander::~RLtoolsCommander(){
@@ -50,6 +52,12 @@ void RLtoolsCommander::Run()
 			next_command_active = manual_control_input.aux1 >= 0.5f;
 		}
 	}
+	if(overwrite){
+		next_command_active = true;
+		last_rc_update_time_set = true;
+		last_rc_update_time = current_time;
+	}
+
 	{
 		if(_vehicle_local_position_sub.update(&vehicle_local_position)) {
 			last_position_update_time_set = true;
@@ -59,7 +67,7 @@ void RLtoolsCommander::Run()
 
 	constexpr uint32_t POSITION_TIMEOUT = 1000*1000; // 100ms timeout
 	constexpr uint32_t RC_TRIGGER_TIMEOUT = 2000*1000; // 200ms timeout
-	next_command_active = next_command_active && last_rc_update_time_set && last_position_update_time_set;
+	// next_command_active = next_command_active && last_rc_update_time_set && last_position_update_time_set;
 	if(last_rc_update_time_set && ((current_time - last_rc_update_time) > RC_TRIGGER_TIMEOUT)){
 		next_command_active = false;
 	}
@@ -71,7 +79,7 @@ void RLtoolsCommander::Run()
 			PX4_INFO("Command enabled");
 			activation_position[0] = vehicle_local_position.x;
 			activation_position[1] = vehicle_local_position.y;
-			activation_position[2] = vehicle_local_position.z - TARGET_HEIGHT; // FRD
+			activation_position[2] = vehicle_local_position.z - target_height; // FRD
 			if constexpr(MAKE_SOME_NOISE){
 				if(next_command_active){
 					tune_control_s tune_control;
@@ -134,7 +142,43 @@ int RLtoolsCommander::print_status()
 
 int RLtoolsCommander::custom_command(int argc, char *argv[])
 {
-	return print_usage("unknown command");
+	bool print_usage = true;
+	int retval = -1;
+	if(argc > 0){
+		if(strcmp(argv[0], "overwrite") == 0){
+			if(argc > 1){
+				if(strcmp(argv[1], "on") == 0){
+					get_instance()->overwrite = true;
+					PX4_INFO_RAW("overwrite on\n");
+					print_usage = false;
+					retval = 0;
+				}
+				else{
+					if(strcmp(argv[1], "off") == 0){
+						get_instance()->overwrite = false;
+						PX4_INFO_RAW("overwrite off\n");
+						print_usage = false;
+						retval = 0;
+					}
+				}
+			}
+		}
+		if(strcmp(argv[0], "set_target_height") == 0){
+			if(argc > 1){
+				float new_target_height = atof(argv[1]);
+				PX4_INFO_RAW("Setting target height from %f to %f", (double)get_instance()->target_height, (double)new_target_height);
+				get_instance()->target_height = new_target_height;
+				print_usage = false;
+				retval = 0;
+			}
+		}
+	}
+	if(print_usage){
+		PX4_INFO_RAW("USAGE:\n");
+		PX4_INFO_RAW("- overwrite [on/off]");
+		PX4_INFO_RAW("- set_target_height xx.xx ([m])");
+	}
+	return retval;
 }
 
 int RLtoolsCommander::print_usage(const char *reason)

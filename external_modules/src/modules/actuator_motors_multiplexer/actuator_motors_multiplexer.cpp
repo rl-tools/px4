@@ -6,6 +6,7 @@ ActuatorMotorsMultiplexer::ActuatorMotorsMultiplexer() : ModuleParams(nullptr), 
 	last_activation_time_set = false;
 	use_original_controller = true;
 	deactivated = false;
+	overwrite = false;
 
 	_actuator_motors_mux_pub.advertise();
 	_rl_tools_multiplexer_status_pub.advertise();
@@ -54,6 +55,11 @@ void ActuatorMotorsMultiplexer::Run()
 			last_rc_update_time = current_time;
 			next_use_original_controller = manual_control_input.aux1 < 0.5f;
 		}
+	}
+	if(overwrite){
+		last_rc_update_time_set = true;
+		last_rc_update_time = current_time;
+		next_use_original_controller = false;
 	}
 
 	constexpr uint32_t RL_TOOLS_CONTROLLER_TIMEOUT = 100*1000; // 100ms timeout
@@ -203,7 +209,24 @@ int ActuatorMotorsMultiplexer::print_status()
 
 int ActuatorMotorsMultiplexer::custom_command(int argc, char *argv[])
 {
-	return print_usage("unknown command");
+	if(argc > 1){
+		if(strcmp(argv[0], "overwrite") == 0){
+			if(strcmp(argv[1], "on") == 0){
+				get_instance()->overwrite = true;
+				PX4_INFO_RAW("overwrite on\n");
+				return 0;
+			}
+			else{
+				if(strcmp(argv[1], "off") == 0){
+					get_instance()->overwrite = false;
+					PX4_INFO_RAW("overwrite off\n");
+					return 0;
+				}
+			}
+		}
+	}
+	PX4_INFO_RAW("USAGE: overwrite [on/off]");
+	return 1;
 }
 
 int ActuatorMotorsMultiplexer::print_usage(const char *reason)
