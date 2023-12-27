@@ -156,7 +156,8 @@ void ActuatorMotorsMultiplexer::Run()
 		}
 		for(int i = 0; i < actuator_motors_s::NUM_CONTROLS; i++){
 			if(!std::isnan(actuator_motors_mux.control[i])){
-				actuator_motors_mux.control[i] = fminf(0.5, actuator_motors_mux.control[i]);
+				constexpr float ACTUATOR_MOTORS_MULTIPLEXER_LIMIT = 1; //0.5;
+				actuator_motors_mux.control[i] = fminf(ACTUATOR_MOTORS_MULTIPLEXER_LIMIT, actuator_motors_mux.control[i]);
 			}
 		}	
 		rl_tools_multiplexer_status_s status;

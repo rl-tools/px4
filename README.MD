@@ -22,6 +22,13 @@ make mro_pixracerpro_default upload
 ```
 
 
+For the SITL simulation you can use the following form:
+
+```
+make px4_sitl gz_x500 EXTERNAL_MODULES_LOCATION=/home/jonas/rl_tools/embedded_platforms/px4/external_modules RL_TOOLS_ROOT=/home/jonas/rl_tools
+```
+
+
 Usage:
 - Go into the QGroundControl console
 - Start module: `rl_tools_benchmark start`

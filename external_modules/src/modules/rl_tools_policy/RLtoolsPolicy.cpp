@@ -315,8 +315,8 @@ void RLtoolsPolicy::Run()
 			value = (value + 1) / 2;
 			// T scaled_value = value * (SCALE_OUTPUT_WITH_THROTTLE ? (_manual_control_input.throttle + 1)/2 : 0.5);
 			constexpr T training_min = 0.1;
-			constexpr T training_max = 0.5;
-			T scaled_value = (training_max - training_min) * value;
+			constexpr T training_max = 0.2;
+			T scaled_value = (training_max - training_min) * value + training_min;
 			actuator_motors.control[action_i] = scaled_value;
 		}
 		else{
