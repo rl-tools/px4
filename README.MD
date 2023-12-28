@@ -28,6 +28,12 @@ For the SITL simulation you can use the following form:
 make px4_sitl gz_x500 EXTERNAL_MODULES_LOCATION=/home/jonas/rl_tools/embedded_platforms/px4/external_modules RL_TOOLS_ROOT=/home/jonas/rl_tools
 ```
 
+Note: It is recommended to disable the landing detection (which might trigger in-flight when using the trained policy):
+```
+COM_DISARM_LAND=-1
+COM_DISARM_PRFLT=-1
+```
+
 
 Usage:
 - Go into the QGroundControl console

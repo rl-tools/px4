@@ -225,7 +225,7 @@ int ActuatorMotorsMultiplexer::custom_command(int argc, char *argv[])
 			}
 		}
 	}
-	PX4_INFO_RAW("USAGE: overwrite [on/off]");
+	PX4_INFO_RAW("USAGE: overwrite [on/off]\n");
 	return 1;
 }
 

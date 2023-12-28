@@ -166,7 +166,7 @@ int RLtoolsCommander::custom_command(int argc, char *argv[])
 		if(strcmp(argv[0], "set_target_height") == 0){
 			if(argc > 1){
 				float new_target_height = atof(argv[1]);
-				PX4_INFO_RAW("Setting target height from %f to %f", (double)get_instance()->target_height, (double)new_target_height);
+				PX4_INFO_RAW("Setting target height from %f to %f\n", (double)get_instance()->target_height, (double)new_target_height);
 				get_instance()->target_height = new_target_height;
 				print_usage = false;
 				retval = 0;
