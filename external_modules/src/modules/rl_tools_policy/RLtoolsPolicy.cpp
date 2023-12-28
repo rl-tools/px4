@@ -82,48 +82,145 @@ T clip(T x, T max, T min){
 	}
 	return x;
 }
+template <typename T>
+void quaternion_multiplication(T q1[4], T q2[4], T q_res[4]){
+	q_res[0] = q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3];
+	q_res[1] = q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2];
+	q_res[2] = q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1];
+	q_res[3] = q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0];
+}
+template <typename T>
+void quaternion_conjugate(T q[4], T q_res[4]){
+	q_res[0] = +q[0];
+	q_res[1] = -q[1];
+	q_res[2] = -q[2];
+	q_res[3] = -q[3];
+}
+template <typename T, int ELEMENT>
+T quaternion_to_rotation_matrix(T q[4]){
+	// row-major
+	T qw = q[0];
+	T qx = q[1];
+	T qy = q[2];
+	T qz = q[3];
+
+	static_assert(ELEMENT >= 0 && ELEMENT < 9);
+	if constexpr(ELEMENT == 0){
+		return 1 - 2*qy*qy - 2*qz*qz;
+	}
+	if constexpr(ELEMENT == 1){
+		return     2*qx*qy - 2*qw*qz;
+	}
+	if constexpr(ELEMENT == 2){
+		return     2*qx*qz + 2*qw*qy;
+	}
+	if constexpr(ELEMENT == 3){
+		return     2*qx*qy + 2*qw*qz;
+	}
+	if constexpr(ELEMENT == 4){
+		return 1 - 2*qx*qx - 2*qz*qz;
+	}
+	if constexpr(ELEMENT == 5){
+		return     2*qy*qz - 2*qw*qx;
+	}
+	if constexpr(ELEMENT == 6){
+		return     2*qx*qz - 2*qw*qy;
+	}
+	if constexpr(ELEMENT == 7){
+		return     2*qy*qz + 2*qw*qx;
+	}
+	if constexpr(ELEMENT == 8){
+		return 1 - 2*qx*qx - 2*qy*qy;
+	}
+	return 0;
+}
+
+template <typename T>
+void quaternion_to_rotation_matrix(T q[4], T R[9]){
+	R[0] = quaternion_to_rotation_matrix<T, 0>(q);
+	R[1] = quaternion_to_rotation_matrix<T, 1>(q);
+	R[2] = quaternion_to_rotation_matrix<T, 2>(q);
+	R[3] = quaternion_to_rotation_matrix<T, 3>(q);
+	R[4] = quaternion_to_rotation_matrix<T, 4>(q);
+	R[5] = quaternion_to_rotation_matrix<T, 5>(q);
+	R[6] = quaternion_to_rotation_matrix<T, 6>(q);
+	R[7] = quaternion_to_rotation_matrix<T, 7>(q);
+	R[8] = quaternion_to_rotation_matrix<T, 8>(q);
+}
+
+template <typename T>
+void rotate_vector(T R[9], T v[3], T v_rotated[3]){
+	v_rotated[0] = R[0] * v[0] + R[1] * v[1] + R[2] * v[2];
+	v_rotated[1] = R[3] * v[0] + R[4] * v[1] + R[5] * v[2];
+	v_rotated[2] = R[6] * v[0] + R[7] * v[1] + R[8] * v[2];
+}
+
 template <typename OBS_SPEC>
 void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, TestObservationMode mode){
 	using T = typename OBS_SPEC::T;
 	// converting from FRD to FLU
     static_assert(OBS_SPEC::ROWS == 1);
     static_assert(OBS_SPEC::COLS == 18);
-	T qw = 1, qx = 0, qy = 0, qz = 0;
+	T qd[4] = {1, 0, 0, 0}, Rt_inv[9];
 	if(mode >= TestObservationMode::ORIENTATION){
-		qw = +_vehicle_attitude.q[0];
-		qx = +_vehicle_attitude.q[1];
-		qy = -_vehicle_attitude.q[2];
-		qz = -_vehicle_attitude.q[3];
+		// FRD to FLU
+		// Validating Julia code:
+		// using Rotations
+		// FRD2FLU = [1 0 0; 0 -1 0; 0 0 -1]
+		// q = rand(UnitQuaternion)
+		// q2 = UnitQuaternion(q.q.s, q.q.v1, -q.q.v2, -q.q.v3)
+		// diff = q2 - FRD2FLU * q * transpose(FRD2FLU)
+		// @assert sum(abs.(diff)) < 1e-10
+
+		T qt[4], qtc[4], qr[4], qd[4];
+		qt[0] = 1; //+_rl_tools_command.target_orientation[0]; // conjugate to build the difference between setpoint and current
+		qt[1] = 0; //+_rl_tools_command.target_orientation[1];
+		qt[2] = 0; //-_rl_tools_command.target_orientation[2];
+		qt[3] = 0; //-_rl_tools_command.target_orientation[3];
+		quaternion_conjugate(qt, qtc);
+		quaternion_to_rotation_matrix(qtc, Rt_inv);
+
+		qr[0] = +_vehicle_attitude.q[0];
+		qr[1] = +_vehicle_attitude.q[1];
+		qr[2] = -_vehicle_attitude.q[2];
+		qr[3] = -_vehicle_attitude.q[3];
+		// qr = qt * qd
+		// qd = qt' * qr
+		quaternion_multiplication(qtc, qr, qd);
 	}
 	if(mode >= TestObservationMode::POSITION){
-		T x = +(_vehicle_local_position.x - _rl_tools_command.target_position[0]);
-		T y = -(_vehicle_local_position.y - _rl_tools_command.target_position[1]);
-		T z = -(_vehicle_local_position.z - _rl_tools_command.target_position[2]);
-		rlt::set(observation, 0,  0 + 0, clip(x, MAX_POSITION_ERROR, -MAX_POSITION_ERROR));
-		rlt::set(observation, 0,  0 + 1, clip(y, MAX_POSITION_ERROR, -MAX_POSITION_ERROR));
-		rlt::set(observation, 0,  0 + 2, clip(z, MAX_POSITION_ERROR, -MAX_POSITION_ERROR));
+		T p[3], pt[3];
+		p[0] = +(_vehicle_local_position.x - _rl_tools_command.target_position[0]);
+		p[1] = -(_vehicle_local_position.y - _rl_tools_command.target_position[1]);
+		p[2] = -(_vehicle_local_position.z - _rl_tools_command.target_position[2]);
+		rotate_vector(Rt_inv, p, pt);
+		rlt::set(observation, 0,  0 + 0, clip(pt[0], MAX_POSITION_ERROR, -MAX_POSITION_ERROR));
+		rlt::set(observation, 0,  0 + 1, clip(pt[1], MAX_POSITION_ERROR, -MAX_POSITION_ERROR));
+		rlt::set(observation, 0,  0 + 2, clip(pt[2], MAX_POSITION_ERROR, -MAX_POSITION_ERROR));
 	}
 	else{
 		rlt::set(observation, 0,  0 + 0, 0);
 		rlt::set(observation, 0,  0 + 1, 0);
 		rlt::set(observation, 0,  0 + 2, 0);
 	}
-    rlt::set(observation, 0,  3 + 0, (1 - 2*qy*qy - 2*qz*qz));
-    rlt::set(observation, 0,  3 + 1, (    2*qx*qy - 2*qw*qz));
-    rlt::set(observation, 0,  3 + 2, (    2*qx*qz + 2*qw*qy));
-    rlt::set(observation, 0,  3 + 3, (    2*qx*qy + 2*qw*qz));
-    rlt::set(observation, 0,  3 + 4, (1 - 2*qx*qx - 2*qz*qz));
-    rlt::set(observation, 0,  3 + 5, (    2*qy*qz - 2*qw*qx));
-    rlt::set(observation, 0,  3 + 6, (    2*qx*qz - 2*qw*qy));
-    rlt::set(observation, 0,  3 + 7, (    2*qy*qz + 2*qw*qx));
-    rlt::set(observation, 0,  3 + 8, (1 - 2*qx*qx - 2*qy*qy));
+    rlt::set(observation, 0,  3 + 0, quaternion_to_rotation_matrix<T, 0>(qd));
+    rlt::set(observation, 0,  3 + 1, quaternion_to_rotation_matrix<T, 1>(qd));
+    rlt::set(observation, 0,  3 + 2, quaternion_to_rotation_matrix<T, 2>(qd));
+    rlt::set(observation, 0,  3 + 3, quaternion_to_rotation_matrix<T, 3>(qd));
+    rlt::set(observation, 0,  3 + 4, quaternion_to_rotation_matrix<T, 4>(qd));
+    rlt::set(observation, 0,  3 + 5, quaternion_to_rotation_matrix<T, 5>(qd));
+    rlt::set(observation, 0,  3 + 6, quaternion_to_rotation_matrix<T, 6>(qd));
+    rlt::set(observation, 0,  3 + 7, quaternion_to_rotation_matrix<T, 7>(qd));
+    rlt::set(observation, 0,  3 + 8, quaternion_to_rotation_matrix<T, 8>(qd));
 	if(mode >= TestObservationMode::LINEAR_VELOCITY){
-		T vx = +_vehicle_local_position.vx;
-		T vy = -_vehicle_local_position.vy;
-		T vz = -_vehicle_local_position.vz;
-		rlt::set(observation, 0, 12 + 0, clip(vx, MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
-		rlt::set(observation, 0, 12 + 1, clip(vy, MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
-		rlt::set(observation, 0, 12 + 2, clip(vz, MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
+		T v[3], vt[3];
+		v[0] = +_vehicle_local_position.vx;
+		v[1] = -_vehicle_local_position.vy;
+		v[2] = -_vehicle_local_position.vz;
+		rotate_vector(Rt_inv, v, vt);
+		rlt::set(observation, 0, 12 + 0, clip(vt[0], MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
+		rlt::set(observation, 0, 12 + 1, clip(vt[1], MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
+		rlt::set(observation, 0, 12 + 2, clip(vt[2], MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
 	}
 	else{
 		rlt::set(observation, 0, 12 + 0, 0);
@@ -225,21 +322,28 @@ void RLtoolsPolicy::Run()
 	// 	timestamp_last_manual_control_input = current_time;
 	// }
 
+	constexpr bool PUBLISH_NON_COMPLETE_STATUS = false;
 	if(!angular_velocity_update){
 		status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_NO_ANGULAR_VELOCITY_UPDATE;
-		_rl_tools_policy_status_pub.publish(status);
+		if constexpr(PUBLISH_NON_COMPLETE_STATUS){
+			_rl_tools_policy_status_pub.publish(status);
+		}
 		return;
 	}
 
 	if(!timestamp_last_angular_velocity_set || !timestamp_last_local_position_set || !timestamp_last_attitude_set){
 		status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_NOT_ALL_OBSERVATIONS_SET;
-		_rl_tools_policy_status_pub.publish(status);
+		if constexpr(PUBLISH_NON_COMPLETE_STATUS){
+			_rl_tools_policy_status_pub.publish(status);
+		}
 		return;
 	}
 
 	if((current_time - timestamp_last_angular_velocity) > OBSERVATION_TIMEOUT_ANGULAR_VELOCITY){
 		status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_ANGULAR_VELOCITY_STALE;
-		_rl_tools_policy_status_pub.publish(status);
+		if constexpr(PUBLISH_NON_COMPLETE_STATUS){
+			_rl_tools_policy_status_pub.publish(status);
+		}
 		if(!timeout_message_sent){
 			PX4_ERR("angular velocity timeout");
 			timeout_message_sent = true;
@@ -248,7 +352,9 @@ void RLtoolsPolicy::Run()
 	}
 	if((current_time - timestamp_last_local_position) > OBSERVATION_TIMEOUT_POSITION){
 		status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_LOCAL_POSITION_STALE;
-		_rl_tools_policy_status_pub.publish(status);
+		if constexpr(PUBLISH_NON_COMPLETE_STATUS){
+			_rl_tools_policy_status_pub.publish(status);
+		}
 		if(!timeout_message_sent){
 			PX4_ERR("local position timeout");
 			timeout_message_sent = true;
@@ -257,7 +363,9 @@ void RLtoolsPolicy::Run()
 	}
 	if((current_time - timestamp_last_attitude) > OBSERVATION_TIMEOUT_ATTITUDE){
 		status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_ATTITUDE_STALE;
-		_rl_tools_policy_status_pub.publish(status);
+		if constexpr(PUBLISH_NON_COMPLETE_STATUS){
+			_rl_tools_policy_status_pub.publish(status);
+		}
 		if(!timeout_message_sent){
 			PX4_ERR("attitude timeout");
 			timeout_message_sent = true;
@@ -300,6 +408,7 @@ void RLtoolsPolicy::Run()
 	for(TI state_i = 0; state_i < 18; state_i++){
 		status.state_observation[state_i] = rlt::get(input, 0, state_i);
 	}
+
 	_rl_tools_policy_status_pub.publish(status);
 
 	controller_tick++;

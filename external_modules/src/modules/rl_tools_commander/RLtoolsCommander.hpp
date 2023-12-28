@@ -14,6 +14,7 @@
 #include <uORB/SubscriptionCallback.hpp>
 #include <uORB/topics/rl_tools_command.h>
 #include <uORB/topics/vehicle_local_position.h>
+#include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/tune_control.h>
 #include <uORB/topics/manual_control_setpoint.h>
 
@@ -42,6 +43,7 @@ private:
 	void Run() override;
 	uORB::Subscription _manual_control_input_sub{ORB_ID(manual_control_input)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_local_position_sub{this, ORB_ID(vehicle_local_position)};
+	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_sub{this, ORB_ID(vehicle_attitude)};
 	uORB::Publication<rl_tools_command_s> _rl_tools_command_pub{ORB_ID(rl_tools_command)};
 	uORB::Publication<tune_control_s> _tune_control_pub{ORB_ID(tune_control)};
 
@@ -49,10 +51,12 @@ private:
 	static constexpr bool SCALE_OUTPUT_WITH_THROTTLE = true;
 	static constexpr float DEFAULT_TARGET_HEIGHT = 0.0;
 
-	uint32_t last_rc_update_time, last_position_update_time;
+	uint32_t last_rc_update_time, last_position_update_time, last_attitude_update_time;
 	vehicle_local_position_s vehicle_local_position;
-	bool last_rc_update_time_set = false, last_position_update_time_set = false;
+	vehicle_attitude_s vehicle_attitude;
+	bool last_rc_update_time_set = false, last_position_update_time_set = false, last_attitude_update_time_set = false;
 	float activation_position[3] = {0, 0, 0};
+	float activation_orientation[4] = {1, 0, 0, 0};
 	bool command_active = false;
 	float target_height = DEFAULT_TARGET_HEIGHT;
 	bool overwrite = false;

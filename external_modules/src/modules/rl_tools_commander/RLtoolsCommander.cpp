@@ -4,9 +4,14 @@ RLtoolsCommander::RLtoolsCommander() : ModuleParams(nullptr), ScheduledWorkItem(
 	command_active = false;
 	last_rc_update_time_set = false;
 	last_position_update_time_set = false;
+	last_attitude_update_time_set = false;
 	activation_position[0] = 0;
-	activation_position[1] = 1;
-	activation_position[2] = 2;
+	activation_position[1] = 0;
+	activation_position[2] = 0;
+	activation_orientation[0] = 1;
+	activation_orientation[1] = 0;
+	activation_orientation[2] = 0;
+	activation_orientation[3] = 0;
 	_rl_tools_command_pub.advertise();
 	if constexpr(MAKE_SOME_NOISE){
 		_tune_control_pub.advertise();
@@ -64,8 +69,16 @@ void RLtoolsCommander::Run()
 			last_position_update_time = current_time;
 		}
 	}
+	{
+		if(_vehicle_attitude_sub.update(&vehicle_attitude)) {
+			last_attitude_update_time_set = true;
+			last_attitude_update_time = current_time;
+		}
+	}
+
 
 	constexpr uint32_t POSITION_TIMEOUT = 1000*1000; // 100ms timeout
+	constexpr uint32_t ATTITUDE_TIMEOUT = 1000*1000; // 100ms timeout
 	constexpr uint32_t RC_TRIGGER_TIMEOUT = 2000*1000; // 200ms timeout
 	// next_command_active = next_command_active && last_rc_update_time_set && last_position_update_time_set;
 	if(last_rc_update_time_set && ((current_time - last_rc_update_time) > RC_TRIGGER_TIMEOUT)){
@@ -74,12 +87,19 @@ void RLtoolsCommander::Run()
 	if(last_position_update_time_set && ((current_time - last_position_update_time) > POSITION_TIMEOUT)){
 		next_command_active = false;
 	}
+	if(last_attitude_update_time_set && ((current_time - last_attitude_update_time) > ATTITUDE_TIMEOUT)){
+		next_command_active = false;
+	}
 	if(prev_command_active != next_command_active){
 		if(next_command_active){ 
 			PX4_INFO("Command enabled");
 			activation_position[0] = vehicle_local_position.x;
 			activation_position[1] = vehicle_local_position.y;
-			activation_position[2] = vehicle_local_position.z - target_height; // FRD
+			activation_position[2] = vehicle_local_position.z;
+			activation_orientation[0] = vehicle_attitude.q[0];
+			activation_orientation[1] = vehicle_attitude.q[1];
+			activation_orientation[2] = vehicle_attitude.q[2];
+			activation_orientation[3] = vehicle_attitude.q[3];
 			if constexpr(MAKE_SOME_NOISE){
 				if(next_command_active){
 					tune_control_s tune_control;
@@ -105,7 +125,20 @@ void RLtoolsCommander::Run()
 		command.timestamp_sample = current_time;
 		command.target_position[0] = activation_position[0];
 		command.target_position[1] = activation_position[1];
-		command.target_position[2] = activation_position[2];
+		command.target_position[2] = activation_position[2] - target_height; // FRD;
+		float w = activation_orientation[0];
+		float x = activation_orientation[1];
+		float y = activation_orientation[2];
+		float z = activation_orientation[3];
+		float yaw = atan2(2*(w*z + x*y), 1 - 2*(y*y + z*z));
+		float w_yaw = cos(yaw/2);
+		float x_yaw = 0;
+		float y_yaw = 0;
+		float z_yaw = sin(yaw/2);
+		command.target_orientation[0] = w_yaw;
+		command.target_orientation[1] = x_yaw;
+		command.target_orientation[2] = y_yaw;
+		command.target_orientation[3] = z_yaw;
 		_rl_tools_command_pub.publish(command);
 	}
 	perf_count(_loop_interval_perf);
