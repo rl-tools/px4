@@ -33,6 +33,10 @@ Note: It is recommended to disable the landing detection (which might trigger in
 COM_DISARM_LAND=-1
 COM_DISARM_PRFLT=-1
 ```
+To log high-frequency data required for sysid:
+```
+SDLOG_PROFILE=8
+```
 
 
 Usage:

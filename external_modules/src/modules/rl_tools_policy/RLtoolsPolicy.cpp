@@ -315,8 +315,8 @@ void RLtoolsPolicy::Run()
 			value = (value + 1) / 2;
 			// T scaled_value = value * (SCALE_OUTPUT_WITH_THROTTLE ? (_manual_control_input.throttle + 1)/2 : 0.5);
 			// todo: add simulation check
-			constexpr T training_min = 0.0;
-			constexpr T training_max = 1.0;
+			constexpr T training_min = rl_tools::checkpoint::meta::action_limit_lower;
+			constexpr T training_max = rl_tools::checkpoint::meta::action_limit_upper;
 			T scaled_value = (training_max - training_min) * value + training_min;
 			actuator_motors.control[action_i] = scaled_value;
 		}
