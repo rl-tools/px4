@@ -172,11 +172,11 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, 
 		// diff = q2 - FRD2FLU * q * transpose(FRD2FLU)
 		// @assert sum(abs.(diff)) < 1e-10
 
-		T qt[4], qtc[4], qr[4], qd[4];
-		qt[0] = 1; //+_rl_tools_command.target_orientation[0]; // conjugate to build the difference between setpoint and current
-		qt[1] = 0; //+_rl_tools_command.target_orientation[1];
-		qt[2] = 0; //-_rl_tools_command.target_orientation[2];
-		qt[3] = 0; //-_rl_tools_command.target_orientation[3];
+		T qt[4], qtc[4], qr[4];
+		qt[0] = +_rl_tools_command.target_orientation[0]; // conjugate to build the difference between setpoint and current
+		qt[1] = +_rl_tools_command.target_orientation[1];
+		qt[2] = -_rl_tools_command.target_orientation[2];
+		qt[3] = -_rl_tools_command.target_orientation[3];
 		quaternion_conjugate(qt, qtc);
 		quaternion_to_rotation_matrix(qtc, Rt_inv);
 
@@ -189,7 +189,7 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, 
 		quaternion_multiplication(qtc, qr, qd);
 	}
 	if(mode >= TestObservationMode::POSITION){
-		T p[3], pt[3];
+		T p[3], pt[3]; // FLU
 		p[0] = +(_vehicle_local_position.x - _rl_tools_command.target_position[0]);
 		p[1] = -(_vehicle_local_position.y - _rl_tools_command.target_position[1]);
 		p[2] = -(_vehicle_local_position.z - _rl_tools_command.target_position[2]);

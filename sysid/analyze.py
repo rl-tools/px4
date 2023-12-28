@@ -401,7 +401,8 @@ found_I_x, found_I_y = find_inertia(merged_timeframes_angular, selected_tau, sel
 # merged_df_test_0 = load_file("sysid/logs/log_15_2023-12-15-15-25-40.ulg", plot=plot_preproc)
 # merged_df_test_0 = load_file("sysid/logs/log_16_2023-12-15-15-33-22.ulg", plot=plot_preproc)
 # merged_df_test_0 = load_file("sysid/logs/log_19_2023-12-15-15-46-50.ulg", plot=plot_preproc)
-eval_type = "sysid"
+# eval_type = "sysid"
+eval_type = "rl_tools"
 if eval_type == "rl_tools":
     merged_df_test_0 = load_file("sysid/logs/log_26_2023-12-15-16-43-56.ulg", plot=plot_preproc)
     find_col("actuator", merged_df_test_0)
@@ -423,7 +424,7 @@ if eval_type == "rl_tools":
 
 
     # df = load_file("sysid/logs/log_15_2023-12-16-23-19-56.ulg", plot=plot_preproc)
-    df = load_file("sysid/logs/log_1110_2023-12-13-11-54-52.ulg", plot=plot_preproc)
+    df = load_file("sysid/logs/log_1120_2023-12-13-11-54-52.ulg", plot=plot_preproc)
     for col in df.columns:
         if "rl_tools" in col:
             print(col)

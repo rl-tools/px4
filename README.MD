@@ -37,6 +37,7 @@ To log high-frequency data required for sysid:
 ```
 SDLOG_PROFILE=8
 ```
+When switching to and from the policy all integral components of the default control stack should be disabled (otherwise they might saturate while the policy is in action and e.g. send maximum throttle when switching back)
 
 
 Usage:

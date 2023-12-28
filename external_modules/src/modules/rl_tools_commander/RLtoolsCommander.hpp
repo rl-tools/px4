@@ -56,7 +56,9 @@ private:
 	vehicle_attitude_s vehicle_attitude;
 	bool last_rc_update_time_set = false, last_position_update_time_set = false, last_attitude_update_time_set = false;
 	float activation_position[3] = {0, 0, 0};
+	float target_position[3] = {0, 0, 0};
 	float activation_orientation[4] = {1, 0, 0, 0};
+	float target_orientation[4] = {1, 0, 0, 0};
 	bool command_active = false;
 	float target_height = DEFAULT_TARGET_HEIGHT;
 	bool overwrite = false;
