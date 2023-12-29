@@ -43,8 +43,8 @@ private:
 		TURN_OFF = 1,
 		TURN_OFF_AFTER_TIMEOUT = 2
 	};
-	// static constexpr Mode MODE = Mode::TURN_OFF_AFTER_TIMEOUT;
-	static constexpr Mode MODE = Mode::TURN_OFF;
+	static constexpr Mode MODE = Mode::SWITCH_BACK;
+	// static constexpr Mode MODE = Mode::TURN_OFF;
 	static constexpr uint64_t SWITCH_BACK_TIMEOUT = 5 * 1000 * 1000;
 	static constexpr bool SCALE_OUTPUT_WITH_THROTTLE = false;
 	void Run() override;

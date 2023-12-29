@@ -68,7 +68,9 @@ void ActuatorMotorsMultiplexer::Run()
 	if(last_rc_update_time_set && ((current_time - last_rc_update_time) > RC_TRIGGER_TIMEOUT)){
 		PX4_WARN("RC trigger timeout");
 		next_use_original_controller = true;
-		deactivated = true;
+		if(MODE != Mode::SWITCH_BACK){
+			deactivated = true;
+		}
 	}
 	if(last_rl_tools_output_time_set && ((current_time - last_rl_tools_output_time) > RL_TOOLS_CONTROLLER_TIMEOUT)){
 		next_use_original_controller = true;
