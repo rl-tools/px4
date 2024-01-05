@@ -325,6 +325,7 @@ def find_inertia(merged_timeframes, selected_tau, selected_slope, selected_inter
         d = motor_thrusts_angular_acceleration.copy()
         # d = d[(np.abs(d[f"dw_{axis}"]) > 10)]
         # d = d[(np.abs(d[f"torque_{axis}"]) > 0.01)]
+        print(f"correlatoin {d[f'torque_{axis}'].corr(d[f'dw_{axis}'])}")
         model.fit(d[f"torque_{axis}"].values.reshape(-1, 1), d[f"dw_{axis}"].values.reshape(-1, 1) * (-1 if invert else 1))
         # I_inv, intercept = (model.coef_[0][0], model.intercept_[0]) # intercept should be close to 0
         I_inv, intercept = (model.coef_[0], model.intercept_) # intercept should be close to 0
@@ -401,26 +402,27 @@ found_I_x, found_I_y = find_inertia(merged_timeframes_angular, selected_tau, sel
 # merged_df_test_0 = load_file("sysid/logs/log_15_2023-12-15-15-25-40.ulg", plot=plot_preproc)
 # merged_df_test_0 = load_file("sysid/logs/log_16_2023-12-15-15-33-22.ulg", plot=plot_preproc)
 # merged_df_test_0 = load_file("sysid/logs/log_19_2023-12-15-15-46-50.ulg", plot=plot_preproc)
-# eval_type = "sysid"
-eval_type = "rl_tools"
+eval_type = "sysid"
+# eval_type = "rl_tools"
 if eval_type == "rl_tools":
-    merged_df_test_0 = load_file("sysid/logs/log_26_2023-12-15-16-43-56.ulg", plot=plot_preproc)
-    find_col("actuator", merged_df_test_0)
-    merged_df_test_0.index.to_series().describe()
-    # motors_topic = "actuator_motors_rl_tools_control"
-    motors_topic = "actuator_motors_control"
-    merged_df_rl_tools_control = merged_df_test_0[[f"{motors_topic}[{motor}]" for motor in range(4)]].dropna()
-    for motor in range(4):
-        plt.plot(merged_df_rl_tools_control.index, merged_df_rl_tools_control[f"{motors_topic}[{motor}]"], label=f"motor {motor}")
-    plt.show()
+    # merged_df_test_0 = load_file("sysid/logs/log_26_2023-12-15-16-43-56.ulg", plot=plot_preproc)
+    # merged_df_test_0 = load_file("sysid/logs/log_26_2023-12-15-16-43-56.ulg", plot=plot_preproc)
+    # find_col("actuator", merged_df_test_0)
+    # merged_df_test_0.index.to_series().describe()
+    # # motors_topic = "actuator_motors_rl_tools_control"
+    # motors_topic = "actuator_motors_control"
+    # merged_df_rl_tools_control = merged_df_test_0[[f"{motors_topic}[{motor}]" for motor in range(4)]].dropna()
+    # for motor in range(4):
+    #     plt.plot(merged_df_rl_tools_control.index, merged_df_rl_tools_control[f"{motors_topic}[{motor}]"], label=f"motor {motor}")
+    # plt.show()
 
 
-    data = pd.read_csv("sysid/logs_csv/log_17_2023-12-15-15-39-16.ulg/log_17_2023-12-15-15-39-16_actuator_motors_0.csv")
-    data = pd.read_csv("sysid/logs_csv/log_21_2023-12-15-16-23-02.ulg/log_21_2023-12-15-16-23-02_actuator_motors_0.csv")
-    find_col("timestamp", data)
-    plt.plot(data["timestamp_sample"], data["timestamp_sample"].diff())
-    # plt.plot(data["timestamp_sample"], data[""].diff())
-    plt.show()
+    # data = pd.read_csv("sysid/logs_csv/log_17_2023-12-15-15-39-16.ulg/log_17_2023-12-15-15-39-16_actuator_motors_0.csv")
+    # data = pd.read_csv("sysid/logs_csv/log_21_2023-12-15-16-23-02.ulg/log_21_2023-12-15-16-23-02_actuator_motors_0.csv")
+    # find_col("timestamp", data)
+    # plt.plot(data["timestamp_sample"], data["timestamp_sample"].diff())
+    # # plt.plot(data["timestamp_sample"], data[""].diff())
+    # plt.show()
 
 
     # df = load_file("sysid/logs/log_15_2023-12-16-23-19-56.ulg", plot=plot_preproc)
