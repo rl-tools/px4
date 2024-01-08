@@ -95,14 +95,14 @@ def torque_angular_acceleration(df, model, output_topic, tau, slope, intercept):
     df_orig["torque_z"] = df["torque_z"]
     return df_orig
 
-def fit_inertia(dfs, model, output_topic, tau, slope, intercept):
+def fit_inertia(dfs, model, output_topic, tau, slope, intercept, verbose=False):
     dfs_tac = [torque_angular_acceleration(df, model, output_topic, tau, slope, intercept) for df in dfs]
     df_tt_tac = pd.concat(dfs_tac)
     def moment_of_inertia(axis, plot=False):
         invert = axis == "y" or axis == "z" # invert y and z to convert from FRD (angular acceleration) to FLU (torque)
         model = LinearRegression()
         d = df_tt_tac[[f"torque_{axis}", f"dw_{axis}"]].dropna().copy()
-        print(f"Correlation {axis} {d[f'torque_{axis}'].corr(d[f'dw_{axis}']) * (-1 if invert else 1)}")
+        print(f"Correlation {axis} {d[f'torque_{axis}'].corr(d[f'dw_{axis}']) * (-1 if invert else 1)}") if verbose else None
         model.fit(d[f"torque_{axis}"].values.reshape(-1, 1), d[f"dw_{axis}"].values * (-1 if invert else 1))
         I_inv, intercept = (model.coef_[0], model.intercept_) # intercept should be close to 0
         I = 1/I_inv
@@ -112,7 +112,7 @@ def fit_inertia(dfs, model, output_topic, tau, slope, intercept):
     return I_x, I_y
 
 def plot_torque_angular_acceleration_curve(dfs, model, output_topic, tau, slope, intercept):
-    I_x, I_y = fit_inertia(dfs, model, output_topic, tau, slope, intercept)
+    I_x, I_y = fit_inertia(dfs, model, output_topic, tau, slope, intercept, verbose=True)
     dfs_tac = [torque_angular_acceleration(df, model, output_topic, tau, slope, intercept) for df in dfs]
     df_tac = pd.concat(dfs_tac)
     for axis in ["x", "y"]:

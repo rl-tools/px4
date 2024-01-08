@@ -10,3 +10,15 @@ rotor_positions = np.array([
     [ rotor_x_displacement,  rotor_y_displacement, 0],
     [-rotor_x_displacement, -rotor_y_displacement, 0]
 ])
+rotor_thrust_directions = np.array([
+    [0, 0, 1],
+    [0, 0, 1],
+    [0, 0, 1],
+    [0, 0, 1]
+])
+rotor_torque_directions = np.array([
+    [0, 0, -1],
+    [0, 0, -1],
+    [0, 0,  1],
+    [0, 0,  1]
+])
