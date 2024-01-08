@@ -65,6 +65,8 @@ def plot_thrust_curve(df_tt, model, output_topic, tau, slope, intercept, hoverin
     plt.hlines(hovering_point, throttle.min(), throttle.max(), color="orange", label="Hovering Point")
     plt.vlines(hovering_throttle ** 2 * 4, thrust.min(), thrust.max(), color="green", label="Expected Hovering Throttle")
     plt.legend()
+    plt.xlabel("Throttle (Sum of Squares) [(0-1)^2]")
+    plt.ylabel("Estimated Thrust (N)")
     plt.show()
 
 def torque_angular_acceleration(df, model, output_topic, tau, slope, intercept):
@@ -124,6 +126,8 @@ def plot_torque_angular_acceleration_curve(dfs, model, output_topic, tau, slope,
         I = I_x if axis == "x" else I_y
         I_inv = 1 / I
         plt.plot(x, x * I_inv, color="red")
-        plt.title(f"I_{axis}: {I}")
+        plt.title(f"I_{axis}{axis}: {I:.5f}")
+        plt.ylabel(f"Angular Acceleration {axis}")
+        plt.xlabel(f"Estimated Torque {axis}")
         plt.show()
 
