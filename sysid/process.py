@@ -79,7 +79,7 @@ def torque_angular_acceleration(df, model, output_topic, tau, slope, intercept):
         df[f"dw_{axis}"] = df[f"vehicle_angular_velocity_xyz_derivative[{dim}]"]
         df_orig[f"dw_{axis}"] = df[f"dw_{axis}"]
 
-    motor_torque = lambda motor, thrust: np.cross(model.rotor_positions[motor], np.array([0, 0, thrust]))
+    motor_torque = lambda motor, thrust: np.cross(model.rotor_positions[motor], model.rotor_thrust_directions[motor]*thrust)
     throttle2thrust = lambda throttle: throttle ** 2 * slope + intercept / 4
     throttle2torque = lambda motor, throttle: motor_torque(motor, throttle2thrust(throttle))
 

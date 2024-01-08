@@ -29,6 +29,7 @@ make px4_sitl gz_x500 EXTERNAL_MODULES_LOCATION=/home/jonas/rl_tools/embedded_pl
 ```
 
 Upload to Pixhawk:
+From the `px4_autopilot` folder:
 ```
 make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=/home/jonas/rl_tools/embedded_platforms/px4/external_modules RL_TOOLS_ROOT=/home/jonas/rl_tools upload
 ```
@@ -48,6 +49,10 @@ Note: It is recommended to disable the landing detection (which might trigger in
 ```
 COM_DISARM_LAND=-1
 COM_DISARM_PRFLT=-1
+```
+Note: It is necessary to disable the integral parts in the integrated controllers as they might accumulate in the background when the policy is active:
+```
+MC_***_I=0
 ```
 To log high-frequency data required for sysid:
 ```
