@@ -56,6 +56,7 @@ def plot_thrust_curve(df_tt, model, output_topic, tau, slope, intercept, hoverin
     df_sysid = df_tt[["thrust", "throttle"]].dropna()
     thrust = df_sysid["thrust"]
     throttle = df_sysid["throttle"]
+    plt.figure()
     plt.scatter(throttle, thrust)
     throttles = np.linspace(throttle.min(), throttle.max(), 100)
     predicted_thrusts = throttles * slope + intercept
@@ -100,7 +101,7 @@ def fit_inertia(dfs, model, output_topic, tau, slope, intercept, verbose=False):
     df_tt_tac = pd.concat(dfs_tac)
     def moment_of_inertia(axis, plot=False):
         invert = axis == "y" or axis == "z" # invert y and z to convert from FRD (angular acceleration) to FLU (torque)
-        model = LinearRegression()
+        model = LinearRegression(fit_intercept=False)
         d = df_tt_tac[[f"torque_{axis}", f"dw_{axis}"]].dropna().copy()
         print(f"Correlation {axis} {d[f'torque_{axis}'].corr(d[f'dw_{axis}']) * (-1 if invert else 1)}") if verbose else None
         model.fit(d[f"torque_{axis}"].values.reshape(-1, 1), d[f"dw_{axis}"].values * (-1 if invert else 1))
@@ -117,11 +118,12 @@ def plot_torque_angular_acceleration_curve(dfs, model, output_topic, tau, slope,
     df_tac = pd.concat(dfs_tac)
     for axis in ["x", "y"]:
         invert = axis == "y" or axis == "z"
-        plt.scatter(df_tac[f"torque_{axis}"], df_tac[f"dw_{axis}"] * (-1 if invert else 1))
+        plt.figure()
+        plt.scatter(df_tac[f"torque_{axis}"], df_tac[f"dw_{axis}"] * (-1 if invert else 1), s=0.1)
         x = np.linspace(df_tac[f"torque_{axis}"].min(), df_tac[f"torque_{axis}"].max(), 100)
         I = I_x if axis == "x" else I_y
         I_inv = 1 / I
-        plt.plot(x, x * I_inv + intercept, color="red")
+        plt.plot(x, x * I_inv, color="red")
         plt.title(f"I_{axis}: {I}")
         plt.show()
 
