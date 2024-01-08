@@ -1,0 +1,7 @@
+model,source,Shape,mass,Ixx,Iyy,Izz,Izz*2/(Ixx + Iyy),mass2inertia
+x500 (px4 gazebo),https://github.com/PX4/PX4-gazebo-models/blob/c78f7f01417168e8faab7a83ade2129c0d26b39d/models/x500/model.sdf,symmetric,2,0.022,0.022,0.040,184.62%,0.01083333333
+Leshikar et al,Asymmetric Quadrotor Modeling and State-Space System Identification,asymmetric,2.5,54.7,15.6,57.2,162.73%,14.06
+Kaputa et al,http://www.ravvenlabs.com/uploads/1/1/8/4/118484574/quadrotor_drone_system_identification_via_model_based_design_and_in_flight_sine_wave_injections_posted.pdf,symmetric,0.25,0.000427,0.000609,0.0015,289.58%,0.002072
+Flightmare,https://github.com/uzh-rpg/flightmare/blob/master/flightlib/configs/quadrotor_env.yaml,symmetric,0.73,0.00791138,0.00791138,0.01230658,155.56%,0.01083750685
+Crazyflie,Learning to fly in Seconds,symmetric,0.027,3.85E-06,3.85E-06,5.97E-06,155.00%,1.43E-04
+Iris,https://github.com/PX4/PX4-SITL_gazebo-classic/blob/main/models/iris/iris.sdf.jinja,asymmetric,1.5,0.029125,0.029125,0.055225,189.61%,0.01941666667
