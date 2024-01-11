@@ -60,6 +60,8 @@ SDLOG_PROFILE=8
 ```
 When switching to and from the policy all integral components of the default control stack should be disabled (otherwise they might saturate while the policy is in action and e.g. send maximum throttle when switching back)
 
+Note to activate the policy using a dead man's switch the aux passthrough should be activated in QGC.
+
 
 Usage:
 - Go into the QGroundControl console

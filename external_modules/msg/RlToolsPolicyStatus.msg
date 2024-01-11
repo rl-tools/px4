@@ -18,7 +18,5 @@ uint8 EXIT_REASON_ATTITUDE_STALE             = 5
 bool command_stale
 
 uint8 substep
-
-uint8 STATE_OBSERVATION_DIM = 18
-float32[18] state_observation
+float32 control_interval
 

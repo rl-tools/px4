@@ -17,6 +17,7 @@ RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_
 	timestamp_last_command_set = false;
 	previous_command_stale = false;
 	timeout_message_sent = false;
+	timestamp_last_policy_frequency_check_set = false;
 
 	// controller state
 	// timestamp_last_forward_pass_set = false;
@@ -289,9 +290,7 @@ void RLtoolsPolicy::Run()
 	status.subscription_update = 0x0;
 	status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_NONE;
 	status.substep = 0;
-	for(TI so_i = 0; so_i < rl_tools_policy_status_s::STATE_OBSERVATION_DIM; so_i++){
-		status.state_observation[so_i] = NAN;
-	}
+	status.control_interval = NAN;
 
 	bool angular_velocity_update = false;
 	if(_vehicle_angular_velocity_sub.update(&_vehicle_angular_velocity)){
@@ -403,12 +402,31 @@ void RLtoolsPolicy::Run()
 
     TI substep = controller_tick % CONTROL_MULTIPLE;
 	status.substep = substep;
+	T policy_interval = perf_mean(_loop_interval_policy_perf);
+	perf_count(_loop_interval_policy_perf);
+	status.control_interval = policy_interval;
 	rl_tools_control(substep, TEST_OBSERVATION_MODE);
-
-	for(TI state_i = 0; state_i < 18; state_i++){
-		status.state_observation[state_i] = rlt::get(input, 0, state_i);
+	if(!timestamp_last_policy_frequency_check_set || (current_time - timestamp_last_policy_frequency_check) > POLICY_FREQUENCY_CHECK_INTERVAL){
+		if(timestamp_last_policy_frequency_check_set){
+			T policy_interval_target_diff = policy_interval * 1e6 - CONTROL_INTERVAL;
+			if(fabs(policy_interval_target_diff) > POLICY_INTERVAL_WARNING_THRESHOLD){
+				PX4_WARN("Policy frequency deviation: %.2fHz (target %.2fHz)", (double)1/policy_interval, (double)1e6/CONTROL_INTERVAL);
+			}
+		}
+		timestamp_last_policy_frequency_check = current_time;
+		timestamp_last_policy_frequency_check_set = true;
 	}
 
+	rl_tools_policy_input_s input_msg;
+	constexpr TI STATE_OBSERVATION_DIM = 18;
+	static_assert(rl_tools_policy_input_s::STATE_OBSERVATION_DIM == STATE_OBSERVATION_DIM);
+	input_msg.timestamp = current_time;
+	input_msg.timestamp_sample = current_time;
+	for(TI state_i = 0; state_i < STATE_OBSERVATION_DIM; state_i++){
+		input_msg.state_observation[state_i] = rlt::get(input, 0, state_i);
+	}
+
+	_rl_tools_policy_input_pub.publish(input_msg);
 	_rl_tools_policy_status_pub.publish(status);
 
 	controller_tick++;
@@ -464,6 +482,7 @@ int RLtoolsPolicy::print_status()
 {
 	perf_print_counter(_loop_perf);
 	perf_print_counter(_loop_interval_perf);
+	perf_print_counter(_loop_interval_policy_perf);
 	PX4_INFO_RAW("Checkpoint: %s\n", rl_tools::checkpoint::meta::name);
 	return 0;
 }

@@ -28,6 +28,7 @@ namespace rlt = RL_TOOLS_NAMESPACE_WRAPPER ::rl_tools;
 #include <uORB/topics/actuator_motors.h>
 #include <uORB/topics/rl_tools_command.h>
 #include <uORB/topics/rl_tools_policy_status.h>
+#include <uORB/topics/rl_tools_policy_input.h>
 
 using namespace time_literals;
 
@@ -91,10 +92,12 @@ private:
 	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_sub{this, ORB_ID(vehicle_attitude)};
 	uORB::Publication<actuator_motors_s> _actuator_motors_rl_tools_pub{ORB_ID(actuator_motors_rl_tools)};
 	uORB::Publication<rl_tools_policy_status_s> _rl_tools_policy_status_pub{ORB_ID(rl_tools_policy_status)};
+	uORB::Publication<rl_tools_policy_input_s> _rl_tools_policy_input_pub{ORB_ID(rl_tools_policy_input)};
 
 	// Performance (perf) counters
 	perf_counter_t	_loop_perf{perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")};
 	perf_counter_t	_loop_interval_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": interval")};
+	perf_counter_t	_loop_interval_policy_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": interval_policy")};
 
 	using DEV_SPEC = rlt::devices::DefaultARMSpecification;
 	// using DEVICE = rl_tools::devices::arm::DSP<DEV_SPEC>;
@@ -107,8 +110,9 @@ private:
 	void rl_tools_control(TI substep, TestObservationMode mode);
 
 	static_assert(BATCH_SIZE == 1);
-	// static constexpr TI CONTROL_INTERVAL = 2000; // 500Hz
-	static constexpr TI CONTROL_MULTIPLE = 8; //1000000 / CONTROL_INTERVAL / 100;
+	static constexpr TI TRAINING_CONTROL_INTERVAL = 10000; // us
+	static constexpr TI CONTROL_MULTIPLE = 5; 
+	static constexpr TI CONTROL_INTERVAL = TRAINING_CONTROL_INTERVAL / CONTROL_MULTIPLE; // 500Hz
 	rl_tools::checkpoint::actor::MODEL::template DoubleBuffer<BATCH_SIZE> buffers;// = {buffer_tick, buffer_tock};
 	static constexpr TI ACTION_HISTORY_LENGTH = 32;
 	static constexpr TI EXPECTED_INPUT_DIM = 3 + 9 + 3 + 3 + ACTION_HISTORY_LENGTH * 4;
@@ -122,4 +126,10 @@ private:
 	bool timestamp_last_forward_pass_set = false;
 	TI controller_tick = 0;
 	T action_history[ACTION_HISTORY_LENGTH][4];
+
+	// messaging state
+	static constexpr TI POLICY_INTERVAL_WARNING_THRESHOLD = 100; // us
+	static constexpr TI POLICY_FREQUENCY_CHECK_INTERVAL = 1000 * 1000; // 1s
+	uint32_t timestamp_last_policy_frequency_check;
+	bool timestamp_last_policy_frequency_check_set = false;
 };
