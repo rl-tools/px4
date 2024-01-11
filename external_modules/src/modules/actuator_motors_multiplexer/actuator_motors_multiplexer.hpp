@@ -43,6 +43,7 @@ private:
 		TURN_OFF = 1,
 		TURN_OFF_AFTER_TIMEOUT = 2
 	};
+	static constexpr float ACTUATOR_MOTORS_MULTIPLEXER_LIMIT = 1;
 	static constexpr Mode MODE = Mode::SWITCH_BACK;
 	// static constexpr Mode MODE = Mode::TURN_OFF;
 	static constexpr uint64_t SWITCH_BACK_TIMEOUT = 5 * 1000 * 1000;

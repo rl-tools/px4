@@ -20,6 +20,7 @@ ActuatorMotorsMultiplexer::~ActuatorMotorsMultiplexer()
 
 bool ActuatorMotorsMultiplexer::init()
 {
+	PX4_WARN("ActuatorMotorsMultiplexer limit: %f", (double)ACTUATOR_MOTORS_MULTIPLEXER_LIMIT);
 	// ScheduleOnInterval(2000_us); // 2000 us interval, 200 Hz rate
 	this->init_time = hrt_absolute_time();
 
@@ -164,7 +165,6 @@ void ActuatorMotorsMultiplexer::Run()
 		}
 		for(int i = 0; i < actuator_motors_s::NUM_CONTROLS; i++){
 			if(!std::isnan(actuator_motors_mux.control[i])){
-				constexpr float ACTUATOR_MOTORS_MULTIPLEXER_LIMIT = 1; //0.5;
 				actuator_motors_mux.control[i] = fminf(ACTUATOR_MOTORS_MULTIPLEXER_LIMIT, actuator_motors_mux.control[i]);
 			}
 		}	
