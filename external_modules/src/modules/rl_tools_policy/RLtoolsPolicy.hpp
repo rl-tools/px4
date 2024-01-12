@@ -111,7 +111,7 @@ private:
 
 	static_assert(BATCH_SIZE == 1);
 	static constexpr TI TRAINING_CONTROL_INTERVAL = 10000; // us
-	static constexpr TI CONTROL_MULTIPLE = 5; 
+	static constexpr TI CONTROL_MULTIPLE = 4; 
 	static constexpr TI CONTROL_INTERVAL = TRAINING_CONTROL_INTERVAL / CONTROL_MULTIPLE; // 500Hz
 	rl_tools::checkpoint::actor::MODEL::template DoubleBuffer<BATCH_SIZE> buffers;// = {buffer_tick, buffer_tock};
 	static constexpr TI ACTION_HISTORY_LENGTH = 32;
