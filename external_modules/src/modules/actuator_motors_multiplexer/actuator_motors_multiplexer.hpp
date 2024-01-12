@@ -15,7 +15,7 @@
 #include <uORB/topics/actuator_motors.h>
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/rl_tools_multiplexer_status.h>
-#include <uORB/topics/rl_tools_command.h>
+#include <uORB/topics/rl_tools_policy_status.h>
 
 using namespace time_literals;
 
@@ -53,14 +53,14 @@ private:
 	void Run() override;
 	static constexpr bool DEACTIVATE_OUTPUTS_AFTER_ACTIVATION = true;
 	uORB::Subscription _manual_control_input_sub{ORB_ID(manual_control_input)};
-	uORB::Subscription _rl_tools_command_sub{ORB_ID(rl_tools_command)};
+	uORB::Subscription _rl_tools_policy_status_sub{ORB_ID(rl_tools_policy_status)};
 	uORB::SubscriptionCallbackWorkItem _actuator_motors_sub{this, ORB_ID(actuator_motors)};
 	uORB::SubscriptionCallbackWorkItem _actuator_motors_rl_tools_sub{this, ORB_ID(actuator_motors_rl_tools)};
 	uORB::Publication<actuator_motors_s> _actuator_motors_mux_pub{ORB_ID(actuator_motors_mux)};
 	uORB::Publication<rl_tools_multiplexer_status_s> _rl_tools_multiplexer_status_pub{ORB_ID(rl_tools_multiplexer_status)};
 
 	manual_control_setpoint_s manual_control_input;
-	rl_tools_command_s _rl_tools_command;
+	rl_tools_policy_status_s _rl_tools_policy_status;
 
 	uint32_t init_time, last_rl_tools_output_time, last_trigger_time, last_activation_time;
 	bool last_rl_tools_output_time_set = false, last_trigger_time_set = false, last_activation_time_set = false;

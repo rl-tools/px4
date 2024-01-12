@@ -16,6 +16,7 @@ uint8 EXIT_REASON_LOCAL_POSITION_STALE       = 4
 uint8 EXIT_REASON_ATTITUDE_STALE             = 5
 
 bool command_stale
+bool active
 
 uint8 substep
 float32 control_interval

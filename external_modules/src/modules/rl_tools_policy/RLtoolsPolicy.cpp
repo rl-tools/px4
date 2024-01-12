@@ -392,6 +392,7 @@ void RLtoolsPolicy::Run()
 		}
 		status.command_stale = false;
 	}
+	status.active = !status.command_stale && _rl_tools_command.active;
 	// if(SCALE_OUTPUT_WITH_THROTTLE && ((current_time - timestamp_last_manual_control_input) > MANUAL_CONTROL_TIMEOUT)){
 	// 	if(!timeout_message_sent){
 	// 		PX4_ERR("manual control input timeout");

@@ -63,10 +63,14 @@ void ActuatorMotorsMultiplexer::Run()
 		}
 	}
 	else{
-		if(_rl_tools_command_sub.update(&_rl_tools_command)) {
-			next_use_original_controller = !_rl_tools_command.active;
-			last_trigger_time = current_time;
-			last_trigger_time_set = true;
+		rl_tools_policy_status_s temp;
+		if(_rl_tools_policy_status_sub.update(&temp)) {
+			if(temp.exit_reason == rl_tools_policy_status_s::EXIT_REASON_NONE){
+				_rl_tools_policy_status = temp;
+				next_use_original_controller = !_rl_tools_policy_status.active;
+				last_trigger_time = current_time;
+				last_trigger_time_set = true;
+			}
 		}
 	}
 	if(overwrite){
@@ -123,6 +127,7 @@ void ActuatorMotorsMultiplexer::Run()
 			deactivated = true;
 		}
 	}
+
 
 	this->use_original_controller = next_use_original_controller;
 
