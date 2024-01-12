@@ -2,7 +2,7 @@
 
 ActuatorMotorsMultiplexer::ActuatorMotorsMultiplexer() : ModuleParams(nullptr), ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::test1) {
 	last_rl_tools_output_time_set = false;
-	last_rc_update_time_set = false;
+	last_trigger_time_set = false;
 	last_activation_time_set = false;
 	use_original_controller = true;
 	deactivated = false;
@@ -23,6 +23,11 @@ bool ActuatorMotorsMultiplexer::init()
 	PX4_WARN("ActuatorMotorsMultiplexer limit: %f", (double)ACTUATOR_MOTORS_MULTIPLEXER_LIMIT);
 	// ScheduleOnInterval(2000_us); // 2000 us interval, 200 Hz rate
 	this->init_time = hrt_absolute_time();
+
+	// if (!_rl_tools_command_sub.registerCallback()) {
+	// 	PX4_ERR("rl_tools_command_sub callback registration failed");
+	// 	return false;
+	// }
 
 	if (!_actuator_motors_sub.registerCallback()) {
 		PX4_ERR("actuator_motors_sub callback registration failed");
@@ -50,24 +55,31 @@ void ActuatorMotorsMultiplexer::Run()
 	bool prev_use_original_controller = this->use_original_controller;
 	bool next_use_original_controller = this->use_original_controller;
 
-	{
+	if constexpr(TRIGGERED_BY_RC){
 		if(_manual_control_input_sub.update(&manual_control_input)) {
-			last_rc_update_time_set = true;
-			last_rc_update_time = current_time;
+			last_trigger_time = current_time;
+			last_trigger_time_set = true;
 			next_use_original_controller = manual_control_input.aux1 < 0.5f;
 		}
 	}
+	else{
+		if(_rl_tools_command_sub.update(&_rl_tools_command)) {
+			next_use_original_controller = !_rl_tools_command.active;
+			last_trigger_time = current_time;
+			last_trigger_time_set = true;
+		}
+	}
 	if(overwrite){
-		last_rc_update_time_set = true;
-		last_rc_update_time = current_time;
+		last_trigger_time_set = true;
+		last_trigger_time = current_time;
 		next_use_original_controller = false;
 	}
 
 	constexpr uint32_t RL_TOOLS_CONTROLLER_TIMEOUT = 100*1000; // 100ms timeout
-	constexpr uint32_t RC_TRIGGER_TIMEOUT = 2000*1000; // 200ms timeout
-	next_use_original_controller = next_use_original_controller || !last_rl_tools_output_time_set || !last_rc_update_time_set;
-	if(last_rc_update_time_set && ((current_time - last_rc_update_time) > RC_TRIGGER_TIMEOUT)){
-		PX4_WARN("RC trigger timeout");
+	constexpr uint32_t ACTIVATION_TRIGGER_TIMEOUT = 30*1000; // 200ms timeout
+	next_use_original_controller = next_use_original_controller || !last_rl_tools_output_time_set || !last_trigger_time_set;
+	if(last_trigger_time_set && ((current_time - last_trigger_time) > ACTIVATION_TRIGGER_TIMEOUT)){
+		PX4_WARN("Activation timeout");
 		next_use_original_controller = true;
 		if(MODE != Mode::SWITCH_BACK){
 			deactivated = true;
@@ -135,12 +147,12 @@ void ActuatorMotorsMultiplexer::Run()
 	else{
 		if(actuator_motors_rl_tools_set){
 			actuator_motors_mux = actuator_motors_rl_tools;
-			float multiplier = 0.5;
-			for(int control_i = 0; control_i < actuator_motors_s::NUM_CONTROLS; control_i++){
-				if(std::isnan(actuator_motors_mux.control[control_i])){
-					actuator_motors_mux.control[control_i] *= multiplier;
-				}
-			}
+			// float multiplier = 0.5;
+			// for(int control_i = 0; control_i < actuator_motors_s::NUM_CONTROLS; control_i++){
+			// 	if(std::isnan(actuator_motors_mux.control[control_i])){
+			// 		actuator_motors_mux.control[control_i] *= multiplier;
+			// 	}
+			// }
 			actuator_motors_mux_set	= true;
 		}
 	}
@@ -152,15 +164,9 @@ void ActuatorMotorsMultiplexer::Run()
 	if(actuator_motors_mux_set){
 		if constexpr(SCALE_OUTPUT_WITH_THROTTLE){
 			for(int i = 0; i < actuator_motors_s::NUM_CONTROLS; i++){
-				if(last_rc_update_time_set && ((current_time - last_rc_update_time) < RC_TRIGGER_TIMEOUT)){
-					float multiplier = (manual_control_input.throttle + 1)/2;
-					multiplier = fmaxf(0, fminf(1, multiplier));
-					actuator_motors_mux.control[i] *= multiplier;
-				}
-				else{
-					// PX4_WARN("RC trigger timeout in scaling");
-					actuator_motors_mux.control[i] = NAN;
-				}
+				float multiplier = (manual_control_input.throttle + 1)/2;
+				multiplier = fmaxf(0, fminf(1, multiplier));
+				actuator_motors_mux.control[i] *= multiplier;
 			}	
 		}
 		for(int i = 0; i < actuator_motors_s::NUM_CONTROLS; i++){

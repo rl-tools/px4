@@ -75,6 +75,7 @@ private:
 
 	void Run() override;
 
+
 	// node state
 	vehicle_local_position_s _vehicle_local_position{};
 	vehicle_angular_velocity_s _vehicle_angular_velocity{};
@@ -108,6 +109,7 @@ private:
 	template <typename OBS_SPEC>
 	void observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, TestObservationMode mode);
 	void rl_tools_control(TI substep, TestObservationMode mode);
+	void clear_action_history();
 
 	static_assert(BATCH_SIZE == 1);
 	static constexpr TI TRAINING_CONTROL_INTERVAL = 10000; // us
@@ -125,6 +127,7 @@ private:
 	uint32_t timestamp_last_forward_pass;
 	bool timestamp_last_forward_pass_set = false;
 	TI controller_tick = 0;
+	TI controller_tick_substep_offset = 0;
 	T action_history[ACTION_HISTORY_LENGTH][4];
 
 	// messaging state

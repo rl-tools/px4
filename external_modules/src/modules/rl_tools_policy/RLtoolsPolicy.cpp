@@ -5,11 +5,7 @@ RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_
 	rlt::malloc(device, input);
 	rlt::malloc(device, output);
 
-	for(TI step_i = 0; step_i < ACTION_HISTORY_LENGTH; step_i++){
-		for(TI action_i = 0; action_i < rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM; action_i++){
-			action_history[step_i][action_i] = 0;
-		}
-	}
+	this->clear_action_history();
 	// node state
 	timestamp_last_angular_velocity_set = false;
 	timestamp_last_local_position_set = false;
@@ -22,6 +18,7 @@ RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_
 	// controller state
 	// timestamp_last_forward_pass_set = false;
 	controller_tick = 0;
+	controller_tick_substep_offset = 0;
 
 	_actuator_motors_rl_tools_pub.advertise();
 }
@@ -240,6 +237,13 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, 
 
 	}
 }
+void RLtoolsPolicy::clear_action_history(){
+	for(TI step_i = 0; step_i < ACTION_HISTORY_LENGTH; step_i++){
+		for(TI action_i = 0; action_i < rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM; action_i++){
+			action_history[step_i][action_i] = rl_tools::checkpoint::meta::action_history_init;
+		}
+	}
+}
 void RLtoolsPolicy::rl_tools_control(TI substep, TestObservationMode mode){
     auto state_rotation_matrix_input = rlt::view(device, input, rlt::matrix::ViewSpec<1, 18>{}, 0, 0);
     observe_rotation_matrix(state_rotation_matrix_input, mode);
@@ -382,6 +386,10 @@ void RLtoolsPolicy::Run()
 		previous_command_stale = true;
 	}
 	else{
+		if(previous_command_stale){
+			clear_action_history();	
+			controller_tick_substep_offset = controller_tick % CONTROL_MULTIPLE;
+		}
 		status.command_stale = false;
 	}
 	// if(SCALE_OUTPUT_WITH_THROTTLE && ((current_time - timestamp_last_manual_control_input) > MANUAL_CONTROL_TIMEOUT)){
@@ -400,7 +408,7 @@ void RLtoolsPolicy::Run()
 	// 	}
 	// }
 
-    TI substep = controller_tick % CONTROL_MULTIPLE;
+    TI substep = (controller_tick-controller_tick_substep_offset) % CONTROL_MULTIPLE;
 	status.substep = substep;
 	T policy_interval = perf_mean(_loop_interval_policy_perf);
 	perf_count(_loop_interval_policy_perf);

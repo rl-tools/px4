@@ -1,6 +1,6 @@
 #include "RLtoolsCommander.hpp"
 
-RLtoolsCommander::RLtoolsCommander() : ModuleParams(nullptr), ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::test1) {
+RLtoolsCommander::RLtoolsCommander() : ModuleParams(nullptr), ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::rate_ctrl) {
 	command_active = false;
 	last_rc_update_time_set = false;
 	last_position_update_time_set = false;
@@ -126,39 +126,38 @@ void RLtoolsCommander::Run()
 
 	command_active = next_command_active;
 
-	if(command_active){
-		rl_tools_command_s command;
-		command.timestamp = current_time;
-		command.timestamp_sample = current_time;
-		command.target_position[0] = target_position[0];
-		command.target_position[1] = target_position[1];
-		command.target_position[2] = target_position[2];
-		float w = target_orientation[0];
-		// float x = activation_orientation[1];
-		// float y = activation_orientation[2];
-		float z = target_orientation[3];
-		float norm_yaw = sqrt(w*w + z*z);
-		float w_yaw, x_yaw, y_yaw, z_yaw;
-		if(norm_yaw > 1e-6f){
-			// we can isolate the yaw component because it is around the Z axis in the world frame (ZYX convention)
-			w_yaw = w / norm_yaw;
-			x_yaw = 0;
-			y_yaw = 0;
-			z_yaw = z / norm_yaw;
-		}
-		else{
-			w_yaw = 1;
-			x_yaw = 0;
-			y_yaw = 0;
-			z_yaw = 0;
-			PX4_WARN("Singularity in extracting yaw from attitude");
-		}
-		command.target_orientation[0] = w_yaw;
-		command.target_orientation[1] = x_yaw;
-		command.target_orientation[2] = y_yaw;
-		command.target_orientation[3] = z_yaw;
-		_rl_tools_command_pub.publish(command);
+	rl_tools_command_s command;
+	command.timestamp = current_time;
+	command.timestamp_sample = current_time;
+	command.active = command_active;
+	command.target_position[0] = target_position[0];
+	command.target_position[1] = target_position[1];
+	command.target_position[2] = target_position[2];
+	float w = target_orientation[0];
+	// float x = activation_orientation[1];
+	// float y = activation_orientation[2];
+	float z = target_orientation[3];
+	float norm_yaw = sqrt(w*w + z*z);
+	float w_yaw, x_yaw, y_yaw, z_yaw;
+	if(norm_yaw > 1e-6f){
+		// we can isolate the yaw component because it is around the Z axis in the world frame (ZYX convention)
+		w_yaw = w / norm_yaw;
+		x_yaw = 0;
+		y_yaw = 0;
+		z_yaw = z / norm_yaw;
 	}
+	else{
+		w_yaw = 1;
+		x_yaw = 0;
+		y_yaw = 0;
+		z_yaw = 0;
+		PX4_WARN("Singularity in extracting yaw from attitude");
+	}
+	command.target_orientation[0] = w_yaw;
+	command.target_orientation[1] = x_yaw;
+	command.target_orientation[2] = y_yaw;
+	command.target_orientation[3] = z_yaw;
+	_rl_tools_command_pub.publish(command);
 	perf_count(_loop_interval_perf);
 }
 

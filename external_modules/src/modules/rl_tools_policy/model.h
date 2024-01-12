@@ -110,6 +110,7 @@ namespace rl_tools::checkpoint::meta{
    char name[] = "2024_01_12_13_26_28_d-o+a+r+h+c+f+w+e+_010_actor_000000010000000";
    constexpr float action_limit_lower = 0.3;
    constexpr float action_limit_upper = 0.7;
-   constexpr float init_max_position = 2;
+   constexpr float init_max_position = 2;  
+   constexpr float action_history_init = -0.254723;
    char commit_hash[] = "348f1d7a7043ccfb293dce61bc156a78ca2497b4";
 }
