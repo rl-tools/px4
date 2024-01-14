@@ -63,6 +63,6 @@ private:
 
 	static_assert(BATCH_SIZE == 1);
 	uint32_t init_time;
-	rl_tools_export::model::MODEL::template DoubleBuffer<BATCH_SIZE> buffers;// = {buffer_tick, buffer_tock};
+	rl_tools_export::model::MODEL::template Buffer<BATCH_SIZE> buffers;// = {buffer_tick, buffer_tock};
 	rlt::MatrixDynamic<rlt::matrix::Specification<T, TI, BATCH_SIZE, rl_tools_export::model::MODEL::OUTPUT_DIM, rlt::matrix::layouts::RowMajorAlignment<TI, 1>>> output;
 };
