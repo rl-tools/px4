@@ -85,6 +85,7 @@ private:
 	bool timestamp_last_local_position_set = false, timestamp_last_angular_velocity_set = false, timestamp_last_attitude_set = false, timestamp_last_command_set = false, timestamp_last_manual_control_input_set = false;
 	bool timeout_message_sent = false;
 	bool previous_command_stale = false;
+	bool previous_active = false;
 
 	
 	uORB::Subscription _rl_tools_command_sub{ORB_ID(rl_tools_command)};

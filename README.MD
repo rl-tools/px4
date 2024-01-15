@@ -35,7 +35,6 @@ make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=/home/jonas/rl_tools/embedded
 ```
 
 HITL
-```
 1. Enable the simulation quadrotor (x) in QGroundControl
 2. Disable the automatic connection to the Pixhawk in QGroundControl
 3. Compile and update firmware `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=/home/jonas/rl_tools/embedded_platforms/px4/external_modules RL_TOOLS_ROOT=/home/jonas/rl_tools upload`
@@ -43,7 +42,6 @@ HITL
 5. Source gazebo stuff `source Tools/simulation/gazebo-classic/setup_gazebo.bash $(pwd) $(pwd)/build/px4_sitl_default`
 6. Start gazebo (classic) `gazebo Tools/simulation/gazebo-classic/sitl_gazebo-classic/worlds/hitl_iris.world`
 7. Start QGroundControl (connects over UDP to the forwarded MAVLINK)
-```
 
 Note: It is recommended to disable the landing detection (which might trigger in-flight when using the trained policy):
 ```

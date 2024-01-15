@@ -12,6 +12,7 @@ RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_
 	timestamp_last_attitude_set = false;
 	timestamp_last_command_set = false;
 	previous_command_stale = false;
+	previous_active = false;
 	timeout_message_sent = false;
 	timestamp_last_policy_frequency_check_set = false;
 
@@ -185,6 +186,16 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, 
 		// qr = qt * qd
 		// qd = qt' * qr
 		quaternion_multiplication(qtc, qr, qd);
+
+		rlt::set(observation, 0,  3 + 0, quaternion_to_rotation_matrix<T, 0>(qd));
+		rlt::set(observation, 0,  3 + 1, quaternion_to_rotation_matrix<T, 1>(qd));
+		rlt::set(observation, 0,  3 + 2, quaternion_to_rotation_matrix<T, 2>(qd));
+		rlt::set(observation, 0,  3 + 3, quaternion_to_rotation_matrix<T, 3>(qd));
+		rlt::set(observation, 0,  3 + 4, quaternion_to_rotation_matrix<T, 4>(qd));
+		rlt::set(observation, 0,  3 + 5, quaternion_to_rotation_matrix<T, 5>(qd));
+		rlt::set(observation, 0,  3 + 6, quaternion_to_rotation_matrix<T, 6>(qd));
+		rlt::set(observation, 0,  3 + 7, quaternion_to_rotation_matrix<T, 7>(qd));
+		rlt::set(observation, 0,  3 + 8, quaternion_to_rotation_matrix<T, 8>(qd));
 	}
 	if(mode >= TestObservationMode::POSITION){
 		T p[3], pt[3]; // FLU
@@ -201,15 +212,6 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, 
 		rlt::set(observation, 0,  0 + 1, 0);
 		rlt::set(observation, 0,  0 + 2, 0);
 	}
-    rlt::set(observation, 0,  3 + 0, quaternion_to_rotation_matrix<T, 0>(qd));
-    rlt::set(observation, 0,  3 + 1, quaternion_to_rotation_matrix<T, 1>(qd));
-    rlt::set(observation, 0,  3 + 2, quaternion_to_rotation_matrix<T, 2>(qd));
-    rlt::set(observation, 0,  3 + 3, quaternion_to_rotation_matrix<T, 3>(qd));
-    rlt::set(observation, 0,  3 + 4, quaternion_to_rotation_matrix<T, 4>(qd));
-    rlt::set(observation, 0,  3 + 5, quaternion_to_rotation_matrix<T, 5>(qd));
-    rlt::set(observation, 0,  3 + 6, quaternion_to_rotation_matrix<T, 6>(qd));
-    rlt::set(observation, 0,  3 + 7, quaternion_to_rotation_matrix<T, 7>(qd));
-    rlt::set(observation, 0,  3 + 8, quaternion_to_rotation_matrix<T, 8>(qd));
 	if(mode >= TestObservationMode::LINEAR_VELOCITY){
 		T v[3], vt[3];
 		v[0] = +_vehicle_local_position.vx;
@@ -375,6 +377,7 @@ void RLtoolsPolicy::Run()
 		}
 		return;
 	}
+	// no return after this point!
 	if(!timestamp_last_command_set || (current_time - timestamp_last_command) > COMMAND_TIMEOUT){
 		status.command_stale = true;
 		if(!previous_command_stale){
@@ -386,13 +389,15 @@ void RLtoolsPolicy::Run()
 		previous_command_stale = true;
 	}
 	else{
-		if(previous_command_stale){
-			clear_action_history();	
-			controller_tick_substep_offset = controller_tick % CONTROL_MULTIPLE;
-		}
 		status.command_stale = false;
 	}
-	status.active = !status.command_stale && _rl_tools_command.active;
+	bool next_active = !status.command_stale && _rl_tools_command.active;
+	if(!previous_active && next_active){
+		clear_action_history();	
+		PX4_INFO("Clearing Action History");
+		controller_tick_substep_offset = controller_tick % CONTROL_MULTIPLE;
+	}
+	status.active = next_active;
 	// if(SCALE_OUTPUT_WITH_THROTTLE && ((current_time - timestamp_last_manual_control_input) > MANUAL_CONTROL_TIMEOUT)){
 	// 	if(!timeout_message_sent){
 	// 		PX4_ERR("manual control input timeout");
@@ -462,6 +467,7 @@ void RLtoolsPolicy::Run()
 	}
 	_actuator_motors_rl_tools_pub.publish(actuator_motors);
 	perf_end(_loop_perf);
+	previous_active = next_active;
 }
 
 int RLtoolsPolicy::task_spawn(int argc, char *argv[])
