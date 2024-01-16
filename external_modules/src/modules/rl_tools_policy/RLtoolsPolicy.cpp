@@ -432,12 +432,20 @@ void RLtoolsPolicy::Run()
 	}
 
 	rl_tools_policy_input_s input_msg;
+	input_msg.active = status.active;
 	constexpr TI STATE_OBSERVATION_DIM = 18;
 	static_assert(rl_tools_policy_input_s::STATE_OBSERVATION_DIM == STATE_OBSERVATION_DIM);
 	input_msg.timestamp = current_time;
 	input_msg.timestamp_sample = current_time;
 	for(TI state_i = 0; state_i < STATE_OBSERVATION_DIM; state_i++){
 		input_msg.state_observation[state_i] = rlt::get(input, 0, state_i);
+	}
+	static_assert(ACTION_HISTORY_LENGTH == rl_tools_policy_input_s::ACTION_HISTORY_LENGTH);
+	static_assert(ACTION_DIM == rl_tools_policy_input_s::ACTION_DIM);
+	for(TI step_i = 0; step_i < ACTION_HISTORY_LENGTH; step_i++){
+		for(TI action_i = 0; action_i < ACTION_DIM; action_i++){
+			input_msg.action_history[step_i*ACTION_DIM + action_i] = action_history[step_i][action_i];
+		}
 	}
 
 	_rl_tools_policy_input_pub.publish(input_msg);

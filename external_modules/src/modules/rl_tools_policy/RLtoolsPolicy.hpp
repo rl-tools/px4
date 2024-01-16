@@ -118,7 +118,8 @@ private:
 	static constexpr TI CONTROL_INTERVAL = TRAINING_CONTROL_INTERVAL / CONTROL_MULTIPLE; // 500Hz
 	rl_tools::checkpoint::actor::MODEL::template Buffer<BATCH_SIZE> buffers;// = {buffer_tick, buffer_tock};
 	static constexpr TI ACTION_HISTORY_LENGTH = 32;
-	static constexpr TI EXPECTED_INPUT_DIM = 3 + 9 + 3 + 3 + ACTION_HISTORY_LENGTH * 4;
+	static constexpr TI ACTION_DIM = 4;
+	static constexpr TI EXPECTED_INPUT_DIM = 3 + 9 + 3 + 3 + ACTION_HISTORY_LENGTH * ACTION_DIM;
 	static_assert(EXPECTED_INPUT_DIM == rl_tools::checkpoint::actor::MODEL::INPUT_DIM);
 	static_assert(rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM == 4);
 	// controller buffers 
@@ -129,7 +130,7 @@ private:
 	bool timestamp_last_forward_pass_set = false;
 	TI controller_tick = 0;
 	TI controller_tick_substep_offset = 0;
-	T action_history[ACTION_HISTORY_LENGTH][4];
+	T action_history[ACTION_HISTORY_LENGTH][ACTION_DIM];
 
 	// messaging state
 	static constexpr TI POLICY_INTERVAL_WARNING_THRESHOLD = 100; // us
