@@ -18,6 +18,8 @@ RLtoolsCommander::RLtoolsCommander() : ModuleParams(nullptr), ScheduledWorkItem(
 	}
 	target_height = DEFAULT_TARGET_HEIGHT;
 	overwrite = false;
+	mode = DEFAULT_MODE;
+	trajectory.initialized = false;
 }
 
 RLtoolsCommander::~RLtoolsCommander(){
@@ -35,6 +37,28 @@ bool RLtoolsCommander::init()
 	return true;
 }
 
+void RLtoolsCommander::FigureEight::update(hrt_abstime now){
+	if(!initialized){
+		reset(now);
+	}
+	float t = (now - start_time) / 1000000.0f;
+	float dt = (now - last_update_time) / 1000000.0f;
+	float target_speed = 1/interval;
+	float speed = target_speed;
+	if(t < warmup_time){
+		speed = target_speed * t/warmup_time;
+	}
+	progress += dt * speed;
+	float pi = M_PI;
+	position[0] = cosf(progress*2.0f*pi + pi / 2.0f) * scale;
+	linear_velocity[0] = -sinf(progress*2*pi + pi / 2) * scale * 2 * pi * speed;
+	position[1] = sinf(2*(progress*2*pi + pi / 2)) / 2.0f * scale;
+	linear_velocity[1] = cosf(2*(progress*2*pi + pi / 2)) / 2.0f * scale * 4 * pi * speed;
+	position[2] = 0;
+	linear_velocity[2] = 0;
+	last_update_time = now;
+}
+
 void RLtoolsCommander::Run()
 {
 	if (should_exit()) {
@@ -44,7 +68,7 @@ void RLtoolsCommander::Run()
 		return;
 	}
 
-	uint32_t current_time = hrt_absolute_time();
+	hrt_abstime current_time = hrt_absolute_time();
 
 	bool prev_command_active = command_active;
 	bool next_command_active = command_active;
@@ -77,9 +101,9 @@ void RLtoolsCommander::Run()
 	}
 
 
-	constexpr uint32_t POSITION_TIMEOUT = 1000*1000; // 100ms timeout
-	constexpr uint32_t ATTITUDE_TIMEOUT = 1000*1000; // 100ms timeout
-	constexpr uint32_t RC_TRIGGER_TIMEOUT = 2000*1000; // 200ms timeout
+	constexpr hrt_abstime POSITION_TIMEOUT = 1000*1000; // 100ms timeout
+	constexpr hrt_abstime ATTITUDE_TIMEOUT = 1000*1000; // 100ms timeout
+	constexpr hrt_abstime RC_TRIGGER_TIMEOUT = 2000*1000; // 200ms timeout
 	// next_command_active = next_command_active && last_rc_update_time_set && last_position_update_time_set;
 	if(last_rc_update_time_set && ((current_time - last_rc_update_time) > RC_TRIGGER_TIMEOUT)){
 		next_command_active = false;
@@ -130,9 +154,36 @@ void RLtoolsCommander::Run()
 	command.timestamp = current_time;
 	command.timestamp_sample = current_time;
 	command.active = command_active;
-	command.target_position[0] = target_position[0];
-	command.target_position[1] = target_position[1];
-	command.target_position[2] = target_position[2];
+
+	switch(mode){
+		case Mode::POSITION:
+			command.target_position[0] = target_position[0];
+			command.target_position[1] = target_position[1];
+			command.target_position[2] = target_position[2];
+			command.target_linear_velocity[0] = 0;
+			command.target_linear_velocity[1] = 0;
+			command.target_linear_velocity[2] = 0;
+			break;
+		case Mode::TRAJECTORY_TRACKING:
+			if(!trajectory.initialized){
+				trajectory.reset(current_time);
+				activation_position[0] = vehicle_local_position.x;
+				activation_position[1] = vehicle_local_position.y;
+				activation_position[2] = vehicle_local_position.z;
+			}
+			else{
+				trajectory.update(current_time);
+			}
+			command.target_position[0] = activation_position[0] + trajectory.position[0];
+			command.target_position[1] = activation_position[1] + trajectory.position[1];
+			command.target_position[2] = activation_position[2] + trajectory.position[2];
+			command.target_linear_velocity[0] = trajectory.linear_velocity[0];
+			command.target_linear_velocity[1] = trajectory.linear_velocity[1];
+			command.target_linear_velocity[2] = trajectory.linear_velocity[2];
+			break;
+		default:
+			break;
+	}
 	float w = target_orientation[0];
 	// float x = activation_orientation[1];
 	// float y = activation_orientation[2];
@@ -195,6 +246,10 @@ void print_custom_command_usage(){
 	PX4_INFO_RAW("- set_target_height xx.xx ([m])\n");
 	PX4_INFO_RAW("- set_target_position xx.xx yy.yy zz.zz ([m], FRD!)\n");
 	PX4_INFO_RAW("- set_target_yaw zz.zz ([rad], FRD!)\n");
+	PX4_INFO_RAW("- set_mode {POSITION,TRAJECTORY_TRACKING}\n");
+	PX4_INFO_RAW("- set_trajectory_scale ([m], default figure-eight is 2mx1m\n");
+	PX4_INFO_RAW("- set_trajectory_interval ([s], default interval is 5.5s\n");
+
 }
 int RLtoolsCommander::custom_command(int argc, char *argv[])
 {
@@ -265,6 +320,55 @@ int RLtoolsCommander::custom_command(int argc, char *argv[])
 				get_instance()->target_orientation[3] = sinf(new_target_yaw/2);
 				print_usage = false;
 				retval = 0;
+			}
+		}
+		if(strcmp(argv[0], "set_trajectory_scale") == 0){
+			if(argc > 1){
+				float new_scale = atof(argv[1]);
+				float old_scale = get_instance()->trajectory.scale;
+				PX4_INFO_RAW("Setting trajectory scale from %f to %f\n", (double)old_scale, (double)new_scale);
+				get_instance()->trajectory.scale = new_scale;
+				print_usage = false;
+				retval = 0;
+			}
+		}
+		if(strcmp(argv[0], "set_trajectory_interval") == 0){
+			if(argc > 1){
+				float new_interval = atof(argv[1]);
+				float old_interval = get_instance()->trajectory.interval;
+				PX4_INFO_RAW("Setting trajectory interval from %f to %f\n", (double)old_interval, (double)new_interval);
+				get_instance()->trajectory.interval = new_interval;
+				print_usage = false;
+				retval = 0;
+			}
+		}
+		if(strcmp(argv[0], "set_mode") == 0){
+			if(argc > 1){
+				const char* mode_names[] = {
+					"POSITION",
+					"TRAJECTORY_TRACKING"
+				};
+				if(strcmp(argv[1], "POSITION") == 0){
+					PX4_INFO_RAW("Setting mode from %s to %s\n", mode_names[(uint8_t)get_instance()->mode], argv[1]);
+					get_instance()->mode = Mode::POSITION;
+					print_usage = false;
+					retval = 0;
+				}
+				else{
+					if(strcmp(argv[1], "TRAJECTORY_TRACKING") == 0){
+						PX4_INFO_RAW("Setting mode from %s to %s\n", mode_names[(uint8_t)get_instance()->mode], argv[1]);
+						if(get_instance()->mode != Mode::TRAJECTORY_TRACKING){
+							PX4_INFO_RAW("Resetting the trajectory\n");
+							get_instance()->trajectory.initialized = false;
+						}
+						get_instance()->mode = Mode::TRAJECTORY_TRACKING;
+						print_usage = false;
+						retval = 0;
+					}
+					else{
+						PX4_INFO_RAW("Unknown mode %s\n", argv[1]);
+					}
+				}
 			}
 		}
 	}

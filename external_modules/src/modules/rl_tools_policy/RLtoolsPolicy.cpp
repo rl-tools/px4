@@ -52,7 +52,7 @@ bool RLtoolsPolicy::init()
 
 	auto input_sample = rlt::row(device, rl_tools::checkpoint::observation::container, 0);
 	auto output_sample = rlt::row(device, output, 0);
-	uint32_t start, end;
+	hrt_abstime start, end;
 	start = hrt_absolute_time();
 	rlt::evaluate(device, rl_tools::checkpoint::actor::model, input_sample, output_sample, buffers);
 	end = hrt_absolute_time();
@@ -214,9 +214,9 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, 
 	}
 	if(mode >= TestObservationMode::LINEAR_VELOCITY){
 		T v[3], vt[3];
-		v[0] = +_vehicle_local_position.vx;
-		v[1] = -_vehicle_local_position.vy;
-		v[2] = -_vehicle_local_position.vz;
+		v[0] = +(_vehicle_local_position.vx - _rl_tools_command.target_linear_velocity[0]);
+		v[1] = -(_vehicle_local_position.vy - _rl_tools_command.target_linear_velocity[1]);
+		v[2] = -(_vehicle_local_position.vz - _rl_tools_command.target_linear_velocity[2]);
 		rotate_vector(Rt_inv, v, vt);
 		rlt::set(observation, 0, 12 + 0, clip(vt[0], MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
 		rlt::set(observation, 0, 12 + 1, clip(vt[1], MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
@@ -288,7 +288,7 @@ void RLtoolsPolicy::Run()
 	perf_count(_loop_interval_perf);
 
 	perf_begin(_loop_perf);
-	uint32_t current_time = hrt_absolute_time();
+	hrt_abstime current_time = hrt_absolute_time();
 
 	rl_tools_policy_status_s status;
 	status.timestamp = current_time;
@@ -305,6 +305,7 @@ void RLtoolsPolicy::Run()
 		angular_velocity_update = true;
 		status.subscription_update |= rl_tools_policy_status_s::SUBSCRIPTION_UPDATE_ANGULAR_VELOCITY;
 	}
+	status.timestamp_sample = _vehicle_angular_velocity.timestamp_sample;
 	if(_vehicle_local_position_sub.update(&_vehicle_local_position)){
 		timestamp_last_local_position = current_time;
 		timestamp_last_local_position_set = true;
@@ -437,6 +438,7 @@ void RLtoolsPolicy::Run()
 	static_assert(rl_tools_policy_input_s::STATE_OBSERVATION_DIM == STATE_OBSERVATION_DIM);
 	input_msg.timestamp = current_time;
 	input_msg.timestamp_sample = current_time;
+	input_msg.timestamp_sample = _vehicle_angular_velocity.timestamp_sample;
 	for(TI state_i = 0; state_i < STATE_OBSERVATION_DIM; state_i++){
 		input_msg.state_observation[state_i] = rlt::get(input, 0, state_i);
 	}

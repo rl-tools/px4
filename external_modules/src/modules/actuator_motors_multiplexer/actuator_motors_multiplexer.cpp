@@ -50,7 +50,7 @@ void ActuatorMotorsMultiplexer::Run()
 		return;
 	}
 
-	uint32_t current_time = hrt_absolute_time();
+	hrt_abstime current_time = hrt_absolute_time();
 
 	bool prev_use_original_controller = this->use_original_controller;
 	bool next_use_original_controller = this->use_original_controller;
@@ -79,8 +79,8 @@ void ActuatorMotorsMultiplexer::Run()
 		next_use_original_controller = false;
 	}
 
-	constexpr uint32_t RL_TOOLS_CONTROLLER_TIMEOUT = 100*1000; // 100ms timeout
-	constexpr uint32_t ACTIVATION_TRIGGER_TIMEOUT = 30*1000; // 200ms timeout
+	constexpr hrt_abstime RL_TOOLS_CONTROLLER_TIMEOUT = 100*1000; // 100ms timeout
+	constexpr hrt_abstime ACTIVATION_TRIGGER_TIMEOUT = 30*1000; // 200ms timeout
 	next_use_original_controller = next_use_original_controller || !last_rl_tools_output_time_set || !last_trigger_time_set;
 	if(last_trigger_time_set && ((current_time - last_trigger_time) > ACTIVATION_TRIGGER_TIMEOUT)){
 		PX4_WARN("Activation timeout");
@@ -181,7 +181,7 @@ void ActuatorMotorsMultiplexer::Run()
 		}	
 		rl_tools_multiplexer_status_s status;
 		status.timestamp = current_time;
-		status.timestamp_sample = current_time;
+		status.timestamp_sample = actuator_motors_mux.timestamp_sample;
 		status.active = !this->use_original_controller;
 		_actuator_motors_mux_pub.publish(actuator_motors_mux);
 		_rl_tools_multiplexer_status_pub.publish(status);

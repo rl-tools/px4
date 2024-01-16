@@ -5,3 +5,4 @@ uint64 timestamp_sample
 bool active
 float32[3] target_position
 float32[4] target_orientation # quaternion w x y z
+float32[3] target_linear_velocity

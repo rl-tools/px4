@@ -63,7 +63,7 @@ private:
 	};
 	// static constexpr TestObservationMode TEST_OBSERVATION_MODE = TestObservationMode::ANGULAR_VELOCITY;
 	static constexpr TestObservationMode TEST_OBSERVATION_MODE = TestObservationMode::ACTION_HISTORY;
-	uint32_t init_time;
+	hrt_abstime init_time;
 	// node constants
 	static constexpr TI OBSERVATION_TIMEOUT_ANGULAR_VELOCITY = 10 * 1000;
 	static constexpr TI OBSERVATION_TIMEOUT_POSITION = 100 * 1000;
@@ -81,7 +81,7 @@ private:
 	vehicle_angular_velocity_s _vehicle_angular_velocity{};
 	vehicle_attitude_s _vehicle_attitude{};
 	rl_tools_command_s _rl_tools_command{};
-	uint32_t timestamp_last_local_position, timestamp_last_angular_velocity, timestamp_last_attitude, timestamp_last_command, timestamp_last_manual_control_input;
+	hrt_abstime timestamp_last_local_position, timestamp_last_angular_velocity, timestamp_last_attitude, timestamp_last_command, timestamp_last_manual_control_input;
 	bool timestamp_last_local_position_set = false, timestamp_last_angular_velocity_set = false, timestamp_last_attitude_set = false, timestamp_last_command_set = false, timestamp_last_manual_control_input_set = false;
 	bool timeout_message_sent = false;
 	bool previous_command_stale = false;
@@ -126,7 +126,7 @@ private:
 	rlt::MatrixDynamic<rlt::matrix::Specification<T, TI, BATCH_SIZE, rl_tools::checkpoint::actor::MODEL::INPUT_DIM, rlt::matrix::layouts::RowMajorAlignment<TI, 1>>> input;
 	rlt::MatrixDynamic<rlt::matrix::Specification<T, TI, BATCH_SIZE, rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM, rlt::matrix::layouts::RowMajorAlignment<TI, 1>>> output;
 	// controller state
-	uint32_t timestamp_last_forward_pass;
+	hrt_abstime timestamp_last_forward_pass;
 	bool timestamp_last_forward_pass_set = false;
 	TI controller_tick = 0;
 	TI controller_tick_substep_offset = 0;
@@ -135,6 +135,6 @@ private:
 	// messaging state
 	static constexpr TI POLICY_INTERVAL_WARNING_THRESHOLD = 100; // us
 	static constexpr TI POLICY_FREQUENCY_CHECK_INTERVAL = 1000 * 1000; // 1s
-	uint32_t timestamp_last_policy_frequency_check;
+	hrt_abstime timestamp_last_policy_frequency_check;
 	bool timestamp_last_policy_frequency_check_set = false;
 };

@@ -40,7 +40,40 @@ public:
 	int print_status() override;
 
 private:
+	struct FigureEight{
+		// parameters
+		float warmup_time = 3;
+		float interval = 5.5;
+		float scale = 1;
+		// state
+		bool initialized = false;
+		hrt_abstime start_time;
+		hrt_abstime last_update_time;
+		float progress = 0;
+		// output
+		float position[3];
+		float linear_velocity[3];
+		void reset(hrt_abstime timestamp){
+			initialized = true;
+			start_time = timestamp;
+			last_update_time = timestamp;
+			progress = 0;
+			for(int i = 0; i < 3; i++){
+				position[i] = 0;
+				linear_velocity[i] = 0;
+			}
+		}
+		void update(hrt_abstime timestamp);
+	};
 	void Run() override;
+
+	enum class Mode: uint8_t{
+		POSITION = 0,
+		TRAJECTORY_TRACKING = 1
+	};
+
+
+	
 	uORB::Subscription _manual_control_input_sub{ORB_ID(manual_control_input)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_local_position_sub{this, ORB_ID(vehicle_local_position)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_sub{this, ORB_ID(vehicle_attitude)};
@@ -51,7 +84,7 @@ private:
 	static constexpr bool SCALE_OUTPUT_WITH_THROTTLE = true;
 	static constexpr float DEFAULT_TARGET_HEIGHT = 0.0;
 
-	uint32_t last_rc_update_time, last_position_update_time, last_attitude_update_time;
+	hrt_abstime last_rc_update_time, last_position_update_time, last_attitude_update_time;
 	vehicle_local_position_s vehicle_local_position;
 	vehicle_attitude_s vehicle_attitude;
 	bool last_rc_update_time_set = false, last_position_update_time_set = false, last_attitude_update_time_set = false;
@@ -62,6 +95,11 @@ private:
 	bool command_active = false;
 	float target_height = DEFAULT_TARGET_HEIGHT;
 	bool overwrite = false;
+	// Mode mode = POSITION;
+	// static constexpr Mode DEFAULT_MODE = Mode::POSITION;
+	static constexpr Mode DEFAULT_MODE = Mode::TRAJECTORY_TRACKING;
+	Mode mode = DEFAULT_MODE;
+	FigureEight trajectory;
 
 	perf_counter_t	_loop_interval_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": interval")};
 };
