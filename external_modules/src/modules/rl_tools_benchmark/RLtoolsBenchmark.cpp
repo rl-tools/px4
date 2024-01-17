@@ -41,7 +41,7 @@ void RLtoolsBenchmark::Run()
 
 
 
-	uint32_t start, end;
+	hrt_abstime start, end;
 	perf_begin(_loop_perf);
 	int iterations = 10000;
 	auto input_sample = rlt::row(device, rl_tools_export::input::container, 0);

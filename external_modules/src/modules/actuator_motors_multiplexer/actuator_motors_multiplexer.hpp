@@ -62,7 +62,7 @@ private:
 	manual_control_setpoint_s manual_control_input;
 	rl_tools_policy_status_s _rl_tools_policy_status;
 
-	uint32_t init_time, last_rl_tools_output_time, last_trigger_time, last_activation_time;
+	hrt_abstime init_time, last_rl_tools_output_time, last_trigger_time, last_activation_time;
 	bool last_rl_tools_output_time_set = false, last_trigger_time_set = false, last_activation_time_set = false;
 	bool use_original_controller = true;
 	bool deactivated = false;
