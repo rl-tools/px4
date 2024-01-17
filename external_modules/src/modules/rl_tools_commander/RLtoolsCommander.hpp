@@ -43,7 +43,7 @@ private:
 	struct FigureEight{
 		// parameters
 		float warmup_time = 3;
-		float interval = 5.5;
+		float interval = 10;
 		float scale = 1;
 		// state
 		bool initialized = false;

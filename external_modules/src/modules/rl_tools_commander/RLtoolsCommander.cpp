@@ -132,16 +132,15 @@ void RLtoolsCommander::Run()
 			target_orientation[2] = activation_orientation[2];
 			target_orientation[3] = activation_orientation[3];
 			if constexpr(MAKE_SOME_NOISE){
-				if(next_command_active){
-					tune_control_s tune_control;
-					tune_control.tune_id = 1;
-					tune_control.volume = 100; //tune_control_s::VOLUME_LEVEL_DEFAULT;
-					tune_control.tune_override = true;
-					tune_control.frequency = 2000;
-					tune_control.duration = 10000;
-					_tune_control_pub.publish(tune_control);
-				}
+				tune_control_s tune_control;
+				tune_control.tune_id = 1;
+				tune_control.volume = 100; //tune_control_s::VOLUME_LEVEL_DEFAULT;
+				tune_control.tune_override = true;
+				tune_control.frequency = 2000;
+				tune_control.duration = 10000;
+				_tune_control_pub.publish(tune_control);
 			}
+			trajectory.reset(current_time);
 		}
 		else{
 			PX4_INFO("Command disabled");

@@ -70,8 +70,8 @@ private:
 	static constexpr TI OBSERVATION_TIMEOUT_ATTITUDE = 50 * 1000;
 	static constexpr TI COMMAND_TIMEOUT = 100 * 1000;
 
-	static constexpr T MAX_POSITION_ERROR = 1.0;
-	static constexpr T MAX_VELOCITY_ERROR = 1.0;
+	static constexpr T MAX_POSITION_ERROR = 3.0;
+	static constexpr T MAX_VELOCITY_ERROR = 10.0;
 
 	void Run() override;
 
