@@ -180,6 +180,14 @@ void RLtoolsCommander::Run()
 			command.target_linear_velocity[1] = trajectory.linear_velocity[1];
 			command.target_linear_velocity[2] = trajectory.linear_velocity[2];
 			break;
+		case Mode::STEP_RESPONSE:
+			command.target_position[0] = activation_position[0] + step_response_offset[0];
+			command.target_position[1] = activation_position[1] + step_response_offset[1];
+			command.target_position[2] = activation_position[2] + step_response_offset[2];
+			command.target_linear_velocity[0] = 0;
+			command.target_linear_velocity[1] = 0;
+			command.target_linear_velocity[2] = 0;
+			break;
 		default:
 			break;
 	}
@@ -236,6 +244,7 @@ int RLtoolsCommander::task_spawn(int argc, char *argv[])
 
 int RLtoolsCommander::print_status()
 {
+	PX4_INFO_RAW("activation_position:\n\t%f\n\t%f\n\t%f\n", activation_position[0], activation_position[1], activation_position[2]);
 	perf_print_counter(_loop_interval_perf);
 	return 0;
 }
@@ -245,9 +254,10 @@ void print_custom_command_usage(){
 	PX4_INFO_RAW("- set_target_height xx.xx ([m])\n");
 	PX4_INFO_RAW("- set_target_position xx.xx yy.yy zz.zz ([m], FRD!)\n");
 	PX4_INFO_RAW("- set_target_yaw zz.zz ([rad], FRD!)\n");
-	PX4_INFO_RAW("- set_mode {POSITION,TRAJECTORY_TRACKING}\n");
+	PX4_INFO_RAW("- set_mode {POSITION,TRAJECTORY_TRACKING,STEP_RESPONSE}\n");
 	PX4_INFO_RAW("- set_trajectory_scale ([m], default figure-eight is 2mx1m\n");
 	PX4_INFO_RAW("- set_trajectory_interval ([s], default interval is 5.5s\n");
+	PX4_INFO_RAW("- set_step_response_offset xx.xx yy.yy zz.zz ([m], FRD!\n");
 
 }
 int RLtoolsCommander::custom_command(int argc, char *argv[])
@@ -307,7 +317,7 @@ int RLtoolsCommander::custom_command(int argc, char *argv[])
 			if(argc > 1){
 				float new_target_yaw = atof(argv[1]);
 				float old_target_yaw = asinf(get_instance()->target_orientation[3])*2;
-				PX4_INFO_RAW("Setting target yaw from %f (%f degrees) to %f (%f degrees)\n",
+				PX4_INFO_RAW("Setting the target yaw from %f (%f degrees) to %f (%f degrees)\n",
 					(double)old_target_yaw,
 					(double)old_target_yaw*180.0/M_PI,
 					(double)new_target_yaw,
@@ -325,7 +335,7 @@ int RLtoolsCommander::custom_command(int argc, char *argv[])
 			if(argc > 1){
 				float new_scale = atof(argv[1]);
 				float old_scale = get_instance()->trajectory.scale;
-				PX4_INFO_RAW("Setting trajectory scale from %f to %f\n", (double)old_scale, (double)new_scale);
+				PX4_INFO_RAW("Setting the trajectory scale from %f to %f\n", (double)old_scale, (double)new_scale);
 				get_instance()->trajectory.scale = new_scale;
 				print_usage = false;
 				retval = 0;
@@ -335,8 +345,29 @@ int RLtoolsCommander::custom_command(int argc, char *argv[])
 			if(argc > 1){
 				float new_interval = atof(argv[1]);
 				float old_interval = get_instance()->trajectory.interval;
-				PX4_INFO_RAW("Setting trajectory interval from %f to %f\n", (double)old_interval, (double)new_interval);
+				PX4_INFO_RAW("Setting the trajectory interval from %f to %f\n", (double)old_interval, (double)new_interval);
 				get_instance()->trajectory.interval = new_interval;
+				print_usage = false;
+				retval = 0;
+			}
+		}
+		if(strcmp(argv[0], "set_step_response_offset") == 0){
+			if(argc > 3){
+				float new_offset[3];
+				new_offset[0] = atof(argv[1]);
+				new_offset[1] = atof(argv[2]);
+				new_offset[2] = atof(argv[3]);
+				PX4_INFO_RAW("Setting the step response offset from (%f %f %f) to (%f %f %f)\n",
+					(double)get_instance()->step_response_offset[0],
+					(double)get_instance()->step_response_offset[1],
+					(double)get_instance()->step_response_offset[2],
+					(double)new_offset[0],
+					(double)new_offset[1],
+					(double)new_offset[2]
+				);
+				get_instance()->step_response_offset[0] = new_offset[0];
+				get_instance()->step_response_offset[1] = new_offset[1];
+				get_instance()->step_response_offset[2] = new_offset[2];
 				print_usage = false;
 				retval = 0;
 			}
@@ -345,7 +376,8 @@ int RLtoolsCommander::custom_command(int argc, char *argv[])
 			if(argc > 1){
 				const char* mode_names[] = {
 					"POSITION",
-					"TRAJECTORY_TRACKING"
+					"TRAJECTORY_TRACKING",
+					"STEP_RESPONSE"
 				};
 				if(strcmp(argv[1], "POSITION") == 0){
 					PX4_INFO_RAW("Setting mode from %s to %s\n", mode_names[(uint8_t)get_instance()->mode], argv[1]);
@@ -365,7 +397,15 @@ int RLtoolsCommander::custom_command(int argc, char *argv[])
 						retval = 0;
 					}
 					else{
-						PX4_INFO_RAW("Unknown mode %s\n", argv[1]);
+						if(strcmp(argv[1], "STEP_RESPONSE") == 0){
+							PX4_INFO_RAW("Setting mode from %s to %s\n", mode_names[(uint8_t)get_instance()->mode], argv[1]);
+							get_instance()->mode = Mode::STEP_RESPONSE;
+							print_usage = false;
+							retval = 0;
+						}
+						else{
+							PX4_INFO_RAW("Unknown mode %s\n", argv[1]);
+						}
 					}
 				}
 			}

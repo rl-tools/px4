@@ -69,7 +69,8 @@ private:
 
 	enum class Mode: uint8_t{
 		POSITION = 0,
-		TRAJECTORY_TRACKING = 1
+		TRAJECTORY_TRACKING = 1,
+		STEP_RESPONSE = 2
 	};
 
 
@@ -100,6 +101,7 @@ private:
 	static constexpr Mode DEFAULT_MODE = Mode::TRAJECTORY_TRACKING;
 	Mode mode = DEFAULT_MODE;
 	FigureEight trajectory;
+	float step_response_offset[3] = {1, 0, 0};
 
 	perf_counter_t	_loop_interval_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": interval")};
 };
