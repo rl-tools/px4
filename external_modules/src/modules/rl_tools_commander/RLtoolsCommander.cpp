@@ -244,7 +244,7 @@ int RLtoolsCommander::task_spawn(int argc, char *argv[])
 
 int RLtoolsCommander::print_status()
 {
-	PX4_INFO_RAW("mode:")
+	PX4_INFO_RAW("mode: ");
 	switch(mode){
 		case Mode::POSITION:
 			PX4_INFO_RAW("POSITION\n");
@@ -264,8 +264,8 @@ int RLtoolsCommander::print_status()
 	PX4_INFO_RAW("activation_orientation:\n\t%f\n\t%f\n\t%f\n\t%f\n", (double)activation_orientation[0], (double)activation_orientation[1], (double)activation_orientation[2], (double)activation_orientation[3]);
 	PX4_INFO_RAW("target_orientation:\n\t%f\n\t%f\n\t%f\n\t%f\n", (double)target_orientation[0], (double)target_orientation[1], (double)target_orientation[2], (double)target_orientation[3]);
 	PX4_INFO_RAW("command_active: %s\n", command_active ? "true" : "false");
-	PX4_INFO_RAW("target_height: %f\n", target_height);
-	PX4_INFO_RAW("step_response_offset:\n\t%f\n\t%f\n\t%f\n\t%f\n", (double)step_response_offset[0], (double)step_response_offset[1], (double)step_response_offset[2], (double)step_response_offset[3]);
+	PX4_INFO_RAW("target_height: %f\n", (double)target_height);
+	PX4_INFO_RAW("step_response_offset:\n\t%f\n\t%f\n\t%f\n", (double)step_response_offset[0], (double)step_response_offset[1], (double)step_response_offset[2]);
 	perf_print_counter(_loop_interval_perf);
 	return 0;
 }
@@ -279,7 +279,6 @@ void print_custom_command_usage(){
 	PX4_INFO_RAW("- set_trajectory_scale ([m], default figure-eight is 2mx1m\n");
 	PX4_INFO_RAW("- set_trajectory_interval ([s], default interval is 5.5s\n");
 	PX4_INFO_RAW("- set_step_response_offset xx.xx yy.yy zz.zz ([m], FRD!\n");
-
 }
 int RLtoolsCommander::custom_command(int argc, char *argv[])
 {
