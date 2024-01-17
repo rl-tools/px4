@@ -244,7 +244,28 @@ int RLtoolsCommander::task_spawn(int argc, char *argv[])
 
 int RLtoolsCommander::print_status()
 {
-	PX4_INFO_RAW("activation_position:\n\t%f\n\t%f\n\t%f\n", activation_position[0], activation_position[1], activation_position[2]);
+	PX4_INFO_RAW("mode:")
+	switch(mode){
+		case Mode::POSITION:
+			PX4_INFO_RAW("POSITION\n");
+			break;
+		case Mode::TRAJECTORY_TRACKING:
+			PX4_INFO_RAW("TRAJECTORY_TRACKING\n");
+			break;
+		case Mode::STEP_RESPONSE:
+			PX4_INFO_RAW("STEP_RESPONSE\n");
+			break;
+		default:
+			PX4_INFO_RAW("UNKNOWN\n");
+			break;	
+	}
+	PX4_INFO_RAW("activation_position:\n\t%f\n\t%f\n\t%f\n", (double)activation_position[0], (double)activation_position[1], (double)activation_position[2]);
+	PX4_INFO_RAW("target_position:\n\t%f\n\t%f\n\t%f\n", (double)target_position[0], (double)target_position[1], (double)target_position[2]);
+	PX4_INFO_RAW("activation_orientation:\n\t%f\n\t%f\n\t%f\n\t%f\n", (double)activation_orientation[0], (double)activation_orientation[1], (double)activation_orientation[2], (double)activation_orientation[3]);
+	PX4_INFO_RAW("target_orientation:\n\t%f\n\t%f\n\t%f\n\t%f\n", (double)target_orientation[0], (double)target_orientation[1], (double)target_orientation[2], (double)target_orientation[3]);
+	PX4_INFO_RAW("command_active: %s\n", command_active ? "true" : "false");
+	PX4_INFO_RAW("target_height: %f\n", target_height);
+	PX4_INFO_RAW("step_response_offset:\n\t%f\n\t%f\n\t%f\n\t%f\n", (double)step_response_offset[0], (double)step_response_offset[1], (double)step_response_offset[2], (double)step_response_offset[3]);
 	perf_print_counter(_loop_interval_perf);
 	return 0;
 }

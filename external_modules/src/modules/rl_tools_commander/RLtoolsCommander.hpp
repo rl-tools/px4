@@ -97,8 +97,8 @@ private:
 	float target_height = DEFAULT_TARGET_HEIGHT;
 	bool overwrite = false;
 	// Mode mode = POSITION;
-	// static constexpr Mode DEFAULT_MODE = Mode::POSITION;
-	static constexpr Mode DEFAULT_MODE = Mode::TRAJECTORY_TRACKING;
+	static constexpr Mode DEFAULT_MODE = Mode::POSITION;
+	// static constexpr Mode DEFAULT_MODE = Mode::TRAJECTORY_TRACKING;
 	Mode mode = DEFAULT_MODE;
 	FigureEight trajectory;
 	float step_response_offset[3] = {1, 0, 0};
