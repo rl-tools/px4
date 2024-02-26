@@ -52,7 +52,7 @@ def find_tau(dfs, model, output_topic, tau_min=0.001, tau_max=0.2, fit_intercept
     correlations = [fit_tau(dfs, tau, model, output_topic, fit_intercept)[0] for tau in tqdm(taus)]
     return np.array(list(zip(taus, correlations)))
 
-def plot_thrust_curve(df_tt, model, output_topic, tau, slope, intercept, hovering_throttle, filename=None):
+def plot_thrust_curve(df_tt, model, output_topic, tau, slope, intercept, hovering_throttle, filename=None, save_only=False):
     df_sysid = df_tt[["thrust", "throttle"]].dropna()
     thrust = df_sysid["thrust"]
     throttle = df_sysid["throttle"]
@@ -67,9 +67,11 @@ def plot_thrust_curve(df_tt, model, output_topic, tau, slope, intercept, hoverin
     plt.legend()
     plt.xlabel("Throttle (Sum of Squares) [(0-1)^2]")
     plt.ylabel("Estimated Thrust (N)")
+    plt.show()
     if not filename is None:
         plt.savefig(filename)
-    plt.show()
+    if not save_only:
+        plt.show()
 
 def torque_angular_acceleration(df, model, output_topic, tau, slope, intercept):
     df_orig = df.copy()
@@ -116,7 +118,7 @@ def fit_inertia(dfs, model, output_topic, tau, slope, intercept, verbose=False):
     I_y = moment_of_inertia("y", plot=True)
     return I_x, I_y
 
-def plot_torque_angular_acceleration_curve(dfs, model, output_topic, tau, slope, intercept, filename=None):
+def plot_torque_angular_acceleration_curve(dfs, model, output_topic, tau, slope, intercept, filename=None, save_only=False, filetype="pdf"):
     I_x, I_y = fit_inertia(dfs, model, output_topic, tau, slope, intercept, verbose=True)
     dfs_tac = [torque_angular_acceleration(df, model, output_topic, tau, slope, intercept) for df in dfs]
     df_tac = pd.concat(dfs_tac)
@@ -131,7 +133,9 @@ def plot_torque_angular_acceleration_curve(dfs, model, output_topic, tau, slope,
         plt.legend()
         plt.ylabel(f"Angular Acceleration {axis}")
         plt.xlabel(f"Estimated Torque {axis}")
-        if not filename is None:
-            plt.savefig(filename + f"_{axis}.pdf")
         plt.show()
+        if not filename is None:
+            plt.savefig(filename + f"_{axis}.{filetype}")
+        if not save_only:
+            plt.show()
 
