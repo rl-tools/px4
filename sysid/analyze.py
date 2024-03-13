@@ -281,10 +281,14 @@ def find_tau(merged_timeframes, plot=False, squared_throttle_lower_bound=0.2):
 
 
 def find_inertia(merged_timeframes, selected_tau, selected_slope, selected_intercept, plot=False):
-
+     
+    I_x = 0.062025274913773014
+    I_y = 0.0694991114302136
+    I_z = 0.1
+    J = np.diag([I_x, I_y, I_z])
     motor_thrusts_angular_accelerations = []
     for merged_timeframe in merged_timeframes:
-        throttle_thrust_sparse = merged_timeframe[["m_0", "m_1", "m_2", "m_3", "dw_x", "dw_y", "dw_z"]].dropna(how="all", subset=["m_0", "m_1", "m_2", "m_3", "dw_x", "dw_y", "dw_z"])
+        throttle_thrust_sparse = merged_timeframe[["m_0", "m_1", "m_2", "m_3", "w_x", "w_y", "w_z", "dw_x", "dw_y", "dw_z"]].dropna(how="all", subset=["m_0", "m_1", "m_2", "m_3", "w_x", "w_y", "w_z", "dw_x", "dw_y", "dw_z"])
         throttle_thrust = throttle_thrust_sparse.interpolate(method="time").dropna()
         motor_thrusts = [(selected_intercept + selected_slope*throttle_thrust[motor]**2).ewm(halflife=f"{selected_tau*np.log(2)} s", times=throttle_thrust.index).mean() for motor in ["m_0", "m_1", "m_2", "m_3"]]
         motor_thrusts_angular_acceleration = throttle_thrust.copy()
@@ -303,6 +307,11 @@ def find_inertia(merged_timeframes, selected_tau, selected_slope, selected_inter
         motor_thrusts_angular_acceleration["torque_y"] = torque.map(lambda torque: torque[1])
         motor_thrusts_angular_acceleration["torque_z"] = torque.map(lambda torque: torque[2])
 
+
+
+
+
+
         if plot:
             plt.plot(motor_thrusts_angular_acceleration.index, motor_thrusts_angular_acceleration["m_0"], label="m_0")
             plt.plot(motor_thrusts_angular_acceleration.index, motor_thrusts_angular_acceleration["m_1"], label="m_1")
@@ -313,6 +322,19 @@ def find_inertia(merged_timeframes, selected_tau, selected_slope, selected_inter
             plt.show()
         for axis in ["x", "y", "z"]:
             motor_thrusts_angular_acceleration[f"dw_{axis}"] = motor_thrusts_angular_acceleration[f"dw_{axis}"].ewm(halflife=f"{0.01} s", times=motor_thrusts_angular_acceleration.index).mean()
+
+        tau = np.array(motor_thrusts_angular_acceleration[[f"torque_{axis}" for axis in "xyz"]])
+        w = np.array(motor_thrusts_angular_acceleration[[f"w_{axis}" for axis in "xyz"]])
+        term = np.cross(w, (J @ w.T).T)
+        mask = np.all((np.abs(term) > 1e-6), axis=1)
+        relative = np.abs(tau[mask]/term[mask])
+        percentile_01 = np.percentile(relative, 1, axis=0)
+        percentile_05 = np.percentile(relative, 5, axis=0)
+        median = np.median(relative, axis=0)
+        print(f"tau is more than {percentile_01} times larger (x, y, z, body frame) than \omega x J \omega in 99% of the cases.")
+        print(f"tau is more than {percentile_05} times larger (x, y, z, body frame) than \omega x J \omega in 95% of the cases.")
+        print(f"tau is more than {median} times larger (x, y, z, body frame) than \omega x J \omega in 50% of the cases.")
+
         motor_thrusts_angular_accelerations.append(motor_thrusts_angular_acceleration)
     
     motor_thrusts_angular_acceleration = pd.concat(motor_thrusts_angular_accelerations)
@@ -320,8 +342,8 @@ def find_inertia(merged_timeframes, selected_tau, selected_slope, selected_inter
     def moment_of_inertia(axis, plot=False):
     # axis = "x"
         invert = axis == "y" or axis == "z"
-        # model = LinearRegression()
-        model = HuberRegressor()
+        model = LinearRegression()
+        # model = HuberRegressor()
         d = motor_thrusts_angular_acceleration.copy()
         # d = d[(np.abs(d[f"dw_{axis}"]) > 10)]
         # d = d[(np.abs(d[f"torque_{axis}"]) > 0.01)]
@@ -335,6 +357,7 @@ def find_inertia(merged_timeframes, selected_tau, selected_slope, selected_inter
             x = np.linspace(d[f"torque_{axis}"].min(), d[f"torque_{axis}"].max(), 100)
             plt.plot(x, x * I_inv + intercept, color="red")
             plt.title(f"I_{axis}: {I}")
+            print(f"I_{axis}: {I}")
             plt.show()
         return I
     I_x = moment_of_inertia("x", plot=True)
