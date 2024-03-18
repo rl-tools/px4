@@ -2,11 +2,15 @@
 
 This example aims at the `Pixracer Pro` which is a `Pixhawk 6C` compliant hardware implementation (have a look at `./px4_autopilot` for the changes to the mro/pixracerpro board definition and compilation config).
 
-Using the following commit of the PX4 firmware: `7f251d093568179209fa724d155ef0301c3657cf`
-
-Optional: Disable CBRK_BUZZER (INT32)
-
-Add `CONFIG_MODULES_BACKPROP_TOOLS_BENCHMARK=y` in the boards `px4config.default`
+[//]: # (Add `CONFIG_MODULES_BACKPROP_TOOLS_BENCHMARK=y` in the boards `px4config.default` &#40;of whichever board you are using&#41;)
+You might have to make space (flash) for the module e.g. by disabling unnecessary modules in the `px4config.default` file of your board (e.g. `./px4_autopilot/boards/mro/pixracerpro/default.px4board`):
+```
+CONFIG_DRIVERS_CAMERA_CAPTURE=n
+CONFIG_DRIVERS_CAMERA_TRIGGER=n
+CONFIG_COMMON_OPTICAL_FLOW=n
+CONFIG_DRIVERS_UAVCAN=n
+CONFIG_MODULES_CAMERA_FEEDBACK=n
+```
 
 Main CMakeList:
 - Move the loading of external modules to after then "include(px4_add_library)"
@@ -14,12 +18,15 @@ Main CMakeList:
 
 Build with (after changing the path to wherever this repository is located)::
 ```
-make mro_pixracerpro_default EXTERNAL_MODULES_LOCATION=/home/jonas/rl_tools/embedded_platforms/px4/external_modules RL_TOOLS_ROOT=/home/jonas/rl_tools -j8
-```
+cd px4_autopilot
+make mro_pixracerpro_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8
+````
 Flash with:
 ```
 make mro_pixracerpro_default upload
 ```
+
+For other boards you can substitute `mro_pixracerpro_default` with the appropriate board name (e.g. `px4_fmu-v6c_default`) and conduct changes in the corresponding `default.px4board` file.
 
 
 For the SITL simulation you can use the following form:
@@ -28,11 +35,6 @@ For the SITL simulation you can use the following form:
 make px4_sitl gz_x500 EXTERNAL_MODULES_LOCATION=/home/jonas/rl_tools/embedded_platforms/px4/external_modules RL_TOOLS_ROOT=/home/jonas/rl_tools
 ```
 
-Upload to Pixhawk:
-From the `px4_autopilot` folder:
-```
-make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=/home/jonas/rl_tools/embedded_platforms/px4/external_modules RL_TOOLS_ROOT=/home/jonas/rl_tools upload
-```
 
 HITL
 1. Enable the simulation quadrotor (x) in QGroundControl
