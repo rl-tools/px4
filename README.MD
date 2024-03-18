@@ -62,8 +62,14 @@ When switching to and from the policy all integral components of the default con
 
 Note to activate the policy using a dead man's switch the aux passthrough should be activated in QGC.
 
+## Usage (Policy):
+- The policy is triggered by the `AUX1` channel, so you should map it in the QGroundControl to a trigger on you remote control. It is best to use a switch that automatically goes back, so you can test the policy for a split second (the controller will switch back to the original controller).
+- You can test the switching (without a battery connected) by looking at the `dmesg` output in the QGroundControl console after pulling the trigger
+- Make sure that you have a good position reference (e.g. GPS) because the policy will try to hover in place (where the trigger was activated)
+- It is highly recommended to test your policies in the HITL simulation at first
+- Flying is on your own risk!
 
-Usage:
+## Usage (Benchmark):
 - Go into the QGroundControl console
 - Start module: `rl_tools_benchmark start`
 - Watch printed output: `dmesg`
