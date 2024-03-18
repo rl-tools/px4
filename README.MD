@@ -67,6 +67,7 @@ Note to activate the policy using a dead man's switch the aux passthrough should
 - You can test the switching (without a battery connected) by looking at the `dmesg` output in the QGroundControl console after pulling the trigger
 - Make sure that you have a good position reference (e.g. GPS) because the policy will try to hover in place (where the trigger was activated)
 - It is highly recommended to test your policies in the HITL simulation at first
+- Make sure that the dynamics (parameters) of the simulation match the real drone!
 - Flying is on your own risk!
 
 ## Usage (Benchmark):
