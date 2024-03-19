@@ -76,6 +76,8 @@ SDLOG_PROFILE=8
 ```
 When switching to and from the policy all integral components of the default control stack should be disabled (otherwise they might saturate while the policy is in action and e.g. send maximum throttle when switching back)
 
+Make sure that the PX4 `IMU_GYRO_RATEMAX` setting is matching the rate that is [expected by the policy](https://github.com/rl-tools/px4/blob/fe4c79b987b3d6928b26240096edbbe2cd608e69/external_modules/src/modules/rl_tools_policy/RLtoolsPolicy.hpp#L118) (`400 Hz` by default)
+
 Note to activate the policy using a dead man's switch the aux passthrough should be activated in QGC.
 
 ## Usage (Policy):
