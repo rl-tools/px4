@@ -2,6 +2,22 @@
 
 This example aims at the `Pixracer Pro` which is a `Pixhawk 6C` compliant hardware implementation (have a look at `./px4_autopilot` for the changes to the mro/pixracerpro board definition and compilation config).
 
+## Installation
+The commands provided here assume that this repo is cloned as a submodule of RLtools (you can also have RLtools separately but need to adjust the paths in that case).
+If you haven't cloned RLtools already:
+```
+git clone https://github.com/rl-tools/rl-tools.git rl_tools
+cd rl_tools
+git submodule update --init --recursive embedded_platforms/px4
+```
+
+## Docker Build Environment (Optional)
+```
+cd rl_tools/embedded_platforms/px4
+docker run -it --rm -v $(cd .. && cd .. && pwd):/rl_tools -w /rl_tools/embedded_platforms/px4/px4_autopilot rltools/px4
+make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8
+```
+
 [//]: # (Add `CONFIG_MODULES_BACKPROP_TOOLS_BENCHMARK=y` in the boards `px4config.default` &#40;of whichever board you are using&#41;)
 You might have to make space (flash) for the module e.g. by disabling unnecessary modules in the `px4config.default` file of your board (e.g. `./px4_autopilot/boards/mro/pixracerpro/default.px4board`):
 ```
@@ -32,14 +48,14 @@ For other boards you can substitute `mro_pixracerpro_default` with the appropria
 For the SITL simulation you can use the following form:
 
 ```
-make px4_sitl gz_x500 EXTERNAL_MODULES_LOCATION=/home/jonas/rl_tools/embedded_platforms/px4/external_modules RL_TOOLS_ROOT=/home/jonas/rl_tools
+make px4_sitl gz_x500 EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd)
 ```
 
 
 HITL
 1. Enable the simulation quadrotor (x) in QGroundControl
 2. Disable the automatic connection to the Pixhawk in QGroundControl
-3. Compile and update firmware `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=/home/jonas/rl_tools/embedded_platforms/px4/external_modules RL_TOOLS_ROOT=/home/jonas/rl_tools upload`
+3. Compile and update firmware `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd)`
 4. Compile gazebo sitl/hitl `DONT_RUN=1 make px4_sitl_default gazebo-classic`
 5. Source gazebo stuff `source Tools/simulation/gazebo-classic/setup_gazebo.bash $(pwd) $(pwd)/build/px4_sitl_default`
 6. Start gazebo (classic) `gazebo Tools/simulation/gazebo-classic/sitl_gazebo-classic/worlds/hitl_iris.world`
@@ -74,3 +90,10 @@ Note to activate the policy using a dead man's switch the aux passthrough should
 - Go into the QGroundControl console
 - Start module: `rl_tools_benchmark start`
 - Watch printed output: `dmesg`
+
+
+
+## Building the Docker Container
+```
+docker build -t rltools/px4 .
+```
