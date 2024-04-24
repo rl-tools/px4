@@ -3,7 +3,14 @@ x500 (px4 gazebo),https://github.com/PX4/PX4-gazebo-models/blob/c78f7f01417168e8
 Leshikar et al,Asymmetric Quadrotor Modeling and State-Space System Identification,asymmetric,2.5,54.7,15.6,57.2
 Kaputa et al,http://www.ravvenlabs.com/uploads/1/1/8/4/118484574/quadrotor_drone_system_identification_via_model_based_design_and_in_flight_sine_wave_injections_posted.pdf,symmetric,0.25,0.000427,0.000609,0.0015
 Flightmare,https://github.com/uzh-rpg/flightmare/blob/master/flightlib/configs/quadrotor_env.yaml,symmetric,0.73,0.00791138,0.00791138,0.01230658
-Crazyflie,Learning to fly in Seconds,symmetric,0.027,3.85E-06,3.85E-06,5.97E-06
 Iris,https://github.com/PX4/PX4-SITL_gazebo-classic/blob/main/models/iris/iris.sdf.jinja,asymmetric,1.5,0.029125,0.029125,0.055225
 px4vision,https://github.com/PX4/PX4-SITL_gazebo-classic/blob/main/models/px4vision/px4vision.sdf,symmetric,1.5,0.029125,0.029125,0.055225
-x-wing,https://dl.acm.org/doi/10.1145/3306346.3322940,symmetric,1.532,0.184,0.191,0.336
+X-wing,https://dl.acm.org/doi/10.1145/3306346.3322940,symmetric,1.532,0.184,0.191,0.336
+Crazyflie 2.0 (Foerster),https://www.research-collection.ethz.ch/handle/20.500.11850/214143,symmetric,0.027,1.66E-05,1.67E-05,2.93E-05
+Crazyflie 2.0 (Landry),https://groups.csail.mit.edu/robotics-center/public_papers/Landry15.pdf,symmetric,0.027,2.40E-05,2.40E-05,3.23E-05
+Crazyflie (disk model),,symmetric,0.027,1.3893749999999999e-05,1.3893749999999999e-05,2.7337499999999997e-05
+Crazyflie (Sanca model),https://www.researchgate.net/publication/232635233_Dynamic_Modelling_of_a_Quadrotor_Aerial_Vehicle_with_Nonlinear_Inputs,symmetric,0.027,1.2482999999999999e-05, 1.2482999999999999e-05,2.3418e-05
+Crazyflie (Luis et. al),https://arxiv.org/abs/1608.05786,symmetric,0.027,1.40E-05,1.40E-05,2.17E-05
+ETH experimental, A framework for maximum likelihood parameter identification applied on MAVs,symmetric,,0.0358,0.0469,0.101
+largequad, https://arxiv.org/abs/2209.09232,symmetric,0.792,0.0047,0.005,0.0074
+Near-hover pos ctrl (vastly diff quadrotors), https://arxiv.org/abs/2209.09232,symmetric,177,92.7e-6, 92.7e-6, 158.57e-6
