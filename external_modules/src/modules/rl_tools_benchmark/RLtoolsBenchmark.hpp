@@ -1,5 +1,6 @@
 #pragma once
 
+#define RL_TOOLS_NN_DISABLE_GENERIC_FORWARD_BACKWARD
 #include <rl_tools/operations/arm.h>
 #include <rl_tools/nn/layers/dense/operations_arm/opt.h>
 #include <rl_tools/nn/layers/dense/operations_arm/dsp.h>
@@ -57,6 +58,7 @@ private:
 	// using DEVICE = rl_tools::devices::arm::DSP<DEV_SPEC>;
 	using DEVICE = rl_tools::devices::arm::OPT<DEV_SPEC>;
 	DEVICE device;
+	decltype(rlt::random::default_engine(device.random)) rng;
 	using TI = typename rl_tools_export::model::MODEL::CONTENT::SPEC::TI;
 	using T = typename rl_tools_export::model::MODEL::CONTENT::SPEC::T;
 	static constexpr TI BATCH_SIZE = decltype(rl_tools_export::input::container)::ROWS;

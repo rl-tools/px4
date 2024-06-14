@@ -6,6 +6,8 @@ RLtoolsBenchmark::RLtoolsBenchmark() :
 {
 	rlt::malloc(device, buffers);
 	rlt::malloc(device, output);
+
+	rng = rlt::random::default_engine(device.random, 0);
 }
 
 RLtoolsBenchmark::~RLtoolsBenchmark()
@@ -48,7 +50,7 @@ void RLtoolsBenchmark::Run()
 	auto output_sample = rlt::row(device, output, 0);
 	start = hrt_absolute_time();
 	for(int iteration_i = 0; iteration_i < iterations; iteration_i++){
-		rlt::evaluate(device, rl_tools_export::model::model, input_sample, output_sample, buffers);
+		rlt::evaluate(device, rl_tools_export::model::module, input_sample, output_sample, buffers, rng);
 	}
 	end = hrt_absolute_time();
 	perf_end(_loop_perf);

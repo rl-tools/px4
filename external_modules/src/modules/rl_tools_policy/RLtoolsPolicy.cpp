@@ -5,6 +5,8 @@ RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_
 	rlt::malloc(device, input);
 	rlt::malloc(device, output);
 
+	rng = rlt::random::default_engine(device.random, 0);
+
 	this->clear_action_history();
 	// node state
 	timestamp_last_angular_velocity_set = false;
@@ -54,7 +56,7 @@ bool RLtoolsPolicy::init()
 	auto output_sample = rlt::row(device, output, 0);
 	hrt_abstime start, end;
 	start = hrt_absolute_time();
-	rlt::evaluate(device, rl_tools::checkpoint::actor::model, input_sample, output_sample, buffers);
+	rlt::evaluate(device, rl_tools::checkpoint::actor::module, input_sample, output_sample, buffers, rng);
 	end = hrt_absolute_time();
 	T inference_frequency = (T)1.0/((T)(end - start)/1e6);
 	PX4_INFO("rl_tools_benchmark: %dHz", (int)(inference_frequency));
@@ -255,7 +257,7 @@ void RLtoolsPolicy::rl_tools_control(TI substep, TestObservationMode mode){
             rlt::set(action_history_observation, 0, step_i * rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM + action_i, action_history[step_i][action_i]);
         }
     }
-    rlt::evaluate(device, rl_tools::checkpoint::actor::model, input, output, buffers);
+    rlt::evaluate(device, rl_tools::checkpoint::actor::module, input, output, buffers, rng);
 	// for(TI action_i = 0; action_i < rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM; action_i++){
 	// 	set(output, 0, action_i, 0.1);
 	// }

@@ -105,6 +105,7 @@ private:
 	// using DEVICE = rl_tools::devices::arm::DSP<DEV_SPEC>;
 	using DEVICE = rlt::devices::arm::OPT<DEV_SPEC>;
 	DEVICE device;
+	decltype(rlt::random::default_engine(device.random)) rng;
 	static constexpr TI BATCH_SIZE = decltype(rl_tools::checkpoint::observation::container)::ROWS;
 
 	template <typename OBS_SPEC>
