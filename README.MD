@@ -1,5 +1,8 @@
 # RLtools: PX4 Module
 
+> **⚠️ Note**: This was tested with RLtools `v1.1.0` please check out the tag `v1.1.0` in the parent directory when using this.
+>
+
 This example aims at the `Pixracer Pro` which is a `Pixhawk 6C` compliant hardware implementation (have a look at `./px4_autopilot` for the changes to the mro/pixracerpro board definition and compilation config).
 
 ## Installation
