@@ -52,8 +52,8 @@ public:
 	int print_status() override;
 
 private:
-	using TI = typename rl_tools::checkpoint::actor::MODEL::CONTENT::SPEC::TI;
-	using T = typename rl_tools::checkpoint::actor::MODEL::CONTENT::SPEC::T;
+	using TI = typename rl_tools::checkpoint::actor::TYPE::SPEC::TI;
+	using T = typename rl_tools::checkpoint::actor::TYPE::SPEC::T;
 	enum class TestObservationMode: TI{
 		ANGULAR_VELOCITY = 0,
 		ORIENTATION = 1,
@@ -106,7 +106,7 @@ private:
 	using DEVICE = rlt::devices::arm::OPT<DEV_SPEC>;
 	DEVICE device;
 	decltype(rlt::random::default_engine(device.random)) rng;
-	static constexpr TI BATCH_SIZE = decltype(rl_tools::checkpoint::observation::container)::ROWS;
+	static constexpr TI BATCH_SIZE = decltype(rl_tools::checkpoint::example::input::container)::ROWS;
 
 	template <typename OBS_SPEC>
 	void observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, TestObservationMode mode);

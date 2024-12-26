@@ -45,12 +45,10 @@ void RLtoolsBenchmark::Run()
 
 	hrt_abstime start, end;
 	perf_begin(_loop_perf);
-	int iterations = 10000;
-	auto input_sample = rlt::row(device, rl_tools_export::input::container, 0);
-	auto output_sample = rlt::row(device, output, 0);
+	int iterations = 1;
 	start = hrt_absolute_time();
 	for(int iteration_i = 0; iteration_i < iterations; iteration_i++){
-		rlt::evaluate(device, rl_tools_export::model::module, input_sample, output_sample, buffers, rng);
+		rlt::evaluate(device, rl_tools::checkpoint::actor::module, rl_tools::checkpoint::example::input::container, output, buffers, rng);
 	}
 	end = hrt_absolute_time();
 	perf_end(_loop_perf);
@@ -61,9 +59,9 @@ void RLtoolsBenchmark::Run()
 	// 		PX4_INFO("input[%d][%d]: %f", batch_i, input_i, get(input::container, batch_i, input_i));
 	// 	}
 	// }
-	for(TI batch_i = 0; batch_i < BATCH_SIZE; batch_i++){
-		for(TI output_i = 0; output_i < rl_tools_export::model::MODEL::OUTPUT_DIM; output_i++){
-			PX4_INFO("output[%d][%d]: %f (diff %f)", batch_i, output_i, get(output, batch_i, output_i), rlt::get(output, batch_i, output_i) - rlt::get(rl_tools_export::output::container, batch_i, output_i));
+	for(TI batch_i = 0; batch_i < rl_tools::checkpoint::example::output::SHAPE::GET<1>; batch_i++){
+		for(TI output_i = 0; output_i < rl_tools::checkpoint::example::output::SHAPE::GET<2>; output_i++){
+			PX4_INFO("output[%d][%d]: %f (diff %f)", batch_i, output_i, get(device, output, 0, batch_i, output_i), rlt::get(device, output, 0, batch_i, output_i) - rlt::get(device, rl_tools::checkpoint::example::output::container, 0, batch_i, output_i));
 		}
 	}
 	PX4_INFO("evaluation time: %dus", (int)(end - start));
