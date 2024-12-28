@@ -35,30 +35,18 @@ void RLtoolsBenchmark::Run()
 	}
 
 	perf_count(_loop_interval_perf);
-
-	// T buffer_tick_memory[mlp_1::SPEC::HIDDEN_DIM];
-	// T buffer_tock_memory[mlp_1::SPEC::HIDDEN_DIM];
-	// rlt::Matrix<rlt::matrix::Specification<T, TI, 1, mlp_1::SPEC::HIDDEN_DIM, mlp_1::SPEC::MEMORY_LAYOUT>> buffer_tick = {(T*)buffer_tick_memory};
-	// rlt::Matrix<rlt::matrix::Specification<T, TI, 1, mlp_1::SPEC::HIDDEN_DIM, mlp_1::SPEC::MEMORY_LAYOUT>> buffer_tock = {(T*)buffer_tock_memory};
-
-
-
 	hrt_abstime start, end;
 	perf_begin(_loop_perf);
-	int iterations = 1;
+	int iterations = 1000;
 	start = hrt_absolute_time();
+	rlt::Mode<rlt::mode::Evaluation<>> mode;
 	for(int iteration_i = 0; iteration_i < iterations; iteration_i++){
-		rlt::evaluate(device, rl_tools::checkpoint::actor::module, rl_tools::checkpoint::example::input::container, output, buffers, rng);
+		rlt::evaluate(device, rl_tools::checkpoint::actor::module, rl_tools::checkpoint::example::input::container, output, buffers, rng, mode);
 	}
 	end = hrt_absolute_time();
 	perf_end(_loop_perf);
 	T inference_frequency = (T)iterations/((T)(end - start)/1e6);
 	PX4_INFO("rl_tools_benchmark: %dHz", (int)(inference_frequency));
-	// for(TI batch_i = 0; batch_i < BATCH_SIZE; batch_i++){
-	// 	for(TI input_i = 0; input_i < mlp_1::SPEC::INPUT_DIM; input_i++){
-	// 		PX4_INFO("input[%d][%d]: %f", batch_i, input_i, get(input::container, batch_i, input_i));
-	// 	}
-	// }
 	for(TI batch_i = 0; batch_i < rl_tools::checkpoint::example::output::SHAPE::GET<1>; batch_i++){
 		for(TI output_i = 0; output_i < rl_tools::checkpoint::example::output::SHAPE::GET<2>; output_i++){
 			PX4_INFO("output[%d][%d]: %f (diff %f)", batch_i, output_i, get(device, output, 0, batch_i, output_i), rlt::get(device, output, 0, batch_i, output_i) - rlt::get(device, rl_tools::checkpoint::example::output::container, 0, batch_i, output_i));

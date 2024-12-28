@@ -3,7 +3,7 @@
 #define RL_TOOLS_NN_DISABLE_GENERIC_FORWARD_BACKWARD
 #include <rl_tools/operations/arm.h>
 #include <rl_tools/nn/layers/dense/operations_arm/opt.h>
-#include <rl_tools/nn/layers/dense/operations_arm/dsp.h>
+// #include <rl_tools/nn/layers/dense/operations_arm/dsp.h>
 #include <rl_tools/nn/layers/sample_and_squash/operations_generic.h>
 #include <rl_tools/nn_models/mlp/operations_generic.h>
 #include <rl_tools/nn_models/sequential/operations_generic.h>

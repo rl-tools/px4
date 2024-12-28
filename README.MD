@@ -102,3 +102,11 @@ Note to activate the policy using a dead man's switch the aux passthrough should
 ```
 docker build -t rltools/px4 .
 ```
+
+
+
+## Reactivating
+1. Ubuntu 24.04: Check out `main` to use the new `./Tools/setup/ubuntu.sh` script.
+2. `git checkout v1.15.2`
+3. `make px4_fmu-v6c_default` to test if the compilation works
+4. `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8`
