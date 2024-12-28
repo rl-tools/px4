@@ -2,23 +2,23 @@ if(NOT DEFINED RL_TOOLS_ROOT)
   message(FATAL_ERROR "RL_TOOLS_ROOT is not defined")
 endif()
 
-set(CMSIS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/CMSIS_5)
-set(CMSIS_DSP ${CMAKE_CURRENT_SOURCE_DIR}/CMSIS-DSP)
+# set(CMSIS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/CMSIS_5)
+# set(CMSIS_DSP ${CMAKE_CURRENT_SOURCE_DIR}/CMSIS-DSP)
 
 include(px4_add_library)
 
-px4_add_library(modules__rl_tools_benchmark_lib
-	${CMSIS_DSP}/Source/MatrixFunctions/MatrixFunctions.c
+# px4_add_library(modules__rl_tools_benchmark_lib
+	# ${CMSIS_DSP}/Source/MatrixFunctions/MatrixFunctions.c
 	# ${CMSIS_DSP}/Source/BasicMathFunctions/BasicMathFunctions.c # conflict with some other rogue module
-	${CMSIS_DSP}/Source/BasicMathFunctions/arm_add_f32.c
-)
-target_include_directories(
-	modules__rl_tools_benchmark_lib
-	PUBLIC
-	${CMSIS_ROOT}/CMSIS/Core/Include
-	${CMSIS_DSP}/Include
-)
-target_compile_options(modules__rl_tools_benchmark_lib PRIVATE -Wno-error)
+	# ${CMSIS_DSP}/Source/BasicMathFunctions/arm_add_f32.c
+# )
+# target_include_directories(
+# 	modules__rl_tools_benchmark_lib
+# 	PUBLIC
+# 	${CMSIS_ROOT}/CMSIS/Core/Include
+# 	${CMSIS_DSP}/Include
+# )
+# target_compile_options(modules__rl_tools_benchmark_lib PRIVATE -Wno-error)
 
 
 px4_add_module(
@@ -39,11 +39,11 @@ target_include_directories(
 	${RL_TOOLS_ROOT}/include
 	${RL_TOOLS_ROOT}/data
 )
-target_link_libraries(
-	modules__rl_tools_benchmark
-	PRIVATE
-	modules__rl_tools_benchmark_lib
-)
+# target_link_libraries(
+# 	modules__rl_tools_benchmark
+# 	PRIVATE
+# 	modules__rl_tools_benchmark_lib
+# )
 
 
 target_compile_features(modules__rl_tools_benchmark PRIVATE cxx_std_17)
