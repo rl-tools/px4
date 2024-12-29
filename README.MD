@@ -112,6 +112,11 @@ docker build -t rltools/px4 .
 4. `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8`
 
 
+## Software in the Loop (SITL)
+```
+GTK_PATH= make px4_sitl gz_x500 EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8
+```
+
 ## Simulation in Hardware (SIH)
 HITL but the dynamics simulation is running on the flight controller
 - cd `px4_autopilot`
