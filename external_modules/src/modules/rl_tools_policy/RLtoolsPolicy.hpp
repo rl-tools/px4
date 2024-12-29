@@ -1,9 +1,11 @@
 #pragma once
 
-#define RL_TOOLS_NAMESPACE_WRAPPER rl_tools_policy
+// #define RL_TOOLS_NAMESPACE_WRAPPER rl_tools_policy
 #include <rl_tools/operations/arm.h>
 #include <rl_tools/nn/layers/dense/operations_arm/opt.h>
+#include <rl_tools/nn/layers/sample_and_squash/operations_generic.h>
 // #include <rl_tools/nn/layers/dense/operations_arm/dsp.h>
+#include <rl_tools/nn_models/mlp/operations_generic.h>
 #include <rl_tools/nn_models/sequential/operations_generic.h>
 #include "model.h"
 
@@ -106,26 +108,30 @@ private:
 	using DEVICE = rlt::devices::arm::OPT<DEV_SPEC>;
 	DEVICE device;
 	decltype(rlt::random::default_engine(device.random)) rng;
-	static constexpr TI BATCH_SIZE = decltype(rl_tools::checkpoint::example::input::container)::ROWS;
+	using ACTOR_TYPE_ORIGINAL = rlt::checkpoint::actor::TYPE;
+	static constexpr TI BATCH_SIZE = 1;
+	using ACTOR_TYPE = ACTOR_TYPE_ORIGINAL::template CHANGE_BATCH_SIZE<TI, BATCH_SIZE>;
 
 	template <typename OBS_SPEC>
 	void observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, TestObservationMode mode);
 	void rl_tools_control(TI substep, TestObservationMode mode);
 	void clear_action_history();
 
+	static constexpr bool REMAP_CRAZYFLIE = true; // PX4 SIH assumes the Quadrotor X configuration, which assumes different rotor positions than the crazyflie mapping (from crazyflie outputs to PX4): 1=>1, 2=>4, 3=>2, 4=>3 
 	static_assert(BATCH_SIZE == 1);
 	static constexpr TI TRAINING_CONTROL_INTERVAL = 10000; // us
-	static constexpr TI CONTROL_MULTIPLE = 4; 
+	static constexpr TI CONTROL_MULTIPLE = 8; // how much faster the control loop is than the simulation/step frequency during training. This is needed to aggregate e.g. 4 steps of action history into one step of the policy input
 	static constexpr TI CONTROL_INTERVAL = TRAINING_CONTROL_INTERVAL / CONTROL_MULTIPLE; // 500Hz
-	rl_tools::checkpoint::actor::MODEL::template Buffer<BATCH_SIZE> buffers;// = {buffer_tick, buffer_tock};
-	static constexpr TI ACTION_HISTORY_LENGTH = 32;
+	ACTOR_TYPE::template Buffer<> buffers;
+	static constexpr TI ACTION_HISTORY_LENGTH = 16;
 	static constexpr TI ACTION_DIM = 4;
+    static constexpr T HOVERING_THROTTLE = 0.66;
 	static constexpr TI EXPECTED_INPUT_DIM = 3 + 9 + 3 + 3 + ACTION_HISTORY_LENGTH * ACTION_DIM;
-	static_assert(EXPECTED_INPUT_DIM == rl_tools::checkpoint::actor::MODEL::INPUT_DIM);
-	static_assert(rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM == 4);
+	static_assert(EXPECTED_INPUT_DIM == rlt::get_last(ACTOR_TYPE::INPUT_SHAPE{}));
+	static_assert(rlt::get_last(ACTOR_TYPE::OUTPUT_SHAPE{}) == ACTION_DIM);
 	// controller buffers 
-	rlt::MatrixDynamic<rlt::matrix::Specification<T, TI, BATCH_SIZE, rl_tools::checkpoint::actor::MODEL::INPUT_DIM, rlt::matrix::layouts::RowMajorAlignment<TI, 1>>> input;
-	rlt::MatrixDynamic<rlt::matrix::Specification<T, TI, BATCH_SIZE, rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM, rlt::matrix::layouts::RowMajorAlignment<TI, 1>>> output;
+	rlt::Tensor<rlt::tensor::Specification<T, TI, ACTOR_TYPE::INPUT_SHAPE, true>> input;
+	rlt::Tensor<rlt::tensor::Specification<T, TI, ACTOR_TYPE::OUTPUT_SHAPE, true>> output;
 	// controller state
 	hrt_abstime timestamp_last_forward_pass;
 	bool timestamp_last_forward_pass_set = false;

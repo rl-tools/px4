@@ -110,3 +110,16 @@ docker build -t rltools/px4 .
 2. `git checkout v1.15.2`
 3. `make px4_fmu-v6c_default` to test if the compilation works
 4. `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8`
+
+
+## Simulation in Hardware (SIH)
+HITL but the dynamics simulation is running on the flight controller
+- cd `px4_autopilot`
+- Build and upload (mind to check the device path) `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8 upload SERIAL_PORT=/dev/ttyACM0`
+- Run mavproxy (because when using JMavSim as the relay the Mavlink console did not work): `mavproxy.py --master=/dev/ttyACM0 --baud=921600     --out=udp:127.0.0.1:4560     --out=udp:127.0.0.1:14550`
+
+- Run JMavSim in simulation only mode (default UDP port: `4560`): `./Tools/simulation/jmavsim/jmavsim_run.sh -q -u -o`
+
+- QGroundControl (set autoconnect to UDP only)
+
+- Set the `SIH_*` dynamics parameters to match the model the policy was trained for (for the Crazyflie e.g. `external_modules/src/modules/rl_tools_policy/crazyflie_sih.params`)
