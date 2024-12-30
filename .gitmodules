@@ -1,3 +1,6 @@
 [submodule "px4_autopilot"]
 	path = px4_autopilot
 	url = https://github.com/rl-tools/px4-autopilot.git
+[submodule "external_modules/src/modules/rl_tools_policy/blob"]
+	path = external_modules/src/modules/rl_tools_policy/blob
+	url = https://github.com/rl-tools/px4-blob

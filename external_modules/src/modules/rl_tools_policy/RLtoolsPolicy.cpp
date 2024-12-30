@@ -5,7 +5,7 @@ RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_
 	rlt::malloc(device, input);
 	rlt::malloc(device, output);
 
-	rng = rlt::random::default_engine(device.random, 0);
+	rlt::init(device, rng, 0);
 
 	this->clear_action_history();
 	// node state
@@ -205,9 +205,9 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, 
 		p[1] = -(_vehicle_local_position.y - _rl_tools_command.target_position[1]);
 		p[2] = -(_vehicle_local_position.z - _rl_tools_command.target_position[2]);
 		rotate_vector(Rt_inv, p, pt);
-		rlt::set(observation, 0,  0 + 0, clip(pt[0], MAX_POSITION_ERROR, -MAX_POSITION_ERROR));
-		rlt::set(observation, 0,  0 + 1, clip(pt[1], MAX_POSITION_ERROR, -MAX_POSITION_ERROR));
-		rlt::set(observation, 0,  0 + 2, clip(pt[2], MAX_POSITION_ERROR, -MAX_POSITION_ERROR));
+		rlt::set(observation, 0,  0 + 0, clip(pt[0], max_position_error, -max_position_error));
+		rlt::set(observation, 0,  0 + 1, clip(pt[1], max_position_error, -max_position_error));
+		rlt::set(observation, 0,  0 + 2, clip(pt[2], max_position_error, -max_position_error));
 	}
 	else{
 		rlt::set(observation, 0,  0 + 0, 0);
@@ -220,9 +220,9 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, 
 		v[1] = -(_vehicle_local_position.vy - _rl_tools_command.target_linear_velocity[1]);
 		v[2] = -(_vehicle_local_position.vz - _rl_tools_command.target_linear_velocity[2]);
 		rotate_vector(Rt_inv, v, vt);
-		rlt::set(observation, 0, 12 + 0, clip(vt[0], MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
-		rlt::set(observation, 0, 12 + 1, clip(vt[1], MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
-		rlt::set(observation, 0, 12 + 2, clip(vt[2], MAX_VELOCITY_ERROR, -MAX_VELOCITY_ERROR));
+		rlt::set(observation, 0, 12 + 0, clip(vt[0], max_velocity_error, -max_velocity_error));
+		rlt::set(observation, 0, 12 + 1, clip(vt[1], max_velocity_error, -max_velocity_error));
+		rlt::set(observation, 0, 12 + 2, clip(vt[2], max_velocity_error, -max_velocity_error));
 	}
 	else{
 		rlt::set(observation, 0, 12 + 0, 0);
@@ -258,7 +258,8 @@ void RLtoolsPolicy::rl_tools_control(TI substep, TestObservationMode mode){
             rlt::set(action_history_observation, 0, step_i * RLtoolsPolicy::ACTION_DIM + action_i, action_history[step_i][action_i]);
         }
     }
-    rlt::evaluate(device, rl_tools::checkpoint::actor::module, input, output, buffers, rng);
+	rlt::Mode<rlt::mode::Evaluation<>> eval_mode;
+    rlt::evaluate(device, rl_tools::checkpoint::actor::module, input, output, buffers, rng, eval_mode);
 	// for(TI action_i = 0; action_i < rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM; action_i++){
 	// 	set(output, 0, action_i, 0.1);
 	// }

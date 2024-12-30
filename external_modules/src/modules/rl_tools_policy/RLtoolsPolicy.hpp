@@ -7,7 +7,7 @@
 // #include <rl_tools/nn/layers/dense/operations_arm/dsp.h>
 #include <rl_tools/nn_models/mlp/operations_generic.h>
 #include <rl_tools/nn_models/sequential/operations_generic.h>
-#include "model.h"
+#include "blob/policy.h" // checkout the blob submodule (https://github.com/rl-tools/px4-blob) to make this available
 
 namespace rlt = RL_TOOLS_NAMESPACE_WRAPPER ::rl_tools;
 
@@ -72,8 +72,12 @@ private:
 	static constexpr TI OBSERVATION_TIMEOUT_ATTITUDE = 50 * 1000;
 	static constexpr TI COMMAND_TIMEOUT = 100 * 1000;
 
-	static constexpr T MAX_POSITION_ERROR = 2.0;
-	static constexpr T MAX_VELOCITY_ERROR = 1.0;
+	T min(T a, T b) {
+		return a < b ? a : b;
+	}
+
+	T max_position_error = min(rl_tools::checkpoint::meta::environment::parameters::mdp::init::max_position, rl_tools::checkpoint::meta::environment::parameters::mdp::termination::position_threshold);
+	T max_velocity_error = min(rl_tools::checkpoint::meta::environment::parameters::mdp::init::max_linear_velocity, rl_tools::checkpoint::meta::environment::parameters::mdp::termination::linear_velocity_threshold);
 
 	void Run() override;
 
@@ -107,7 +111,7 @@ private:
 	// using DEVICE = rl_tools::devices::arm::DSP<DEV_SPEC>;
 	using DEVICE = rlt::devices::arm::OPT<DEV_SPEC>;
 	DEVICE device;
-	decltype(rlt::random::default_engine(device.random)) rng;
+	DEVICE::SPEC::RANDOM::ENGINE<> rng;
 	using ACTOR_TYPE_ORIGINAL = rlt::checkpoint::actor::TYPE;
 	static constexpr TI BATCH_SIZE = 1;
 	using ACTOR_TYPE = ACTOR_TYPE_ORIGINAL::template CHANGE_BATCH_SIZE<TI, BATCH_SIZE>;
