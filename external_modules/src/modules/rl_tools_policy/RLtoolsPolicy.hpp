@@ -124,7 +124,7 @@ private:
 	static constexpr bool REMAP_CRAZYFLIE = false; // PX4 SIH assumes the Quadrotor X configuration, which assumes different rotor positions than the crazyflie mapping (from crazyflie outputs to PX4): 1=>1, 2=>4, 3=>2, 4=>3 
 	static_assert(BATCH_SIZE == 1);
 	static constexpr TI TRAINING_CONTROL_INTERVAL = 10000; // us
-	static constexpr TI CONTROL_MULTIPLE = 8; // how much faster the control loop is than the simulation/step frequency during training. This is needed to aggregate e.g. 4 steps of action history into one step of the policy input
+	static constexpr TI CONTROL_MULTIPLE = 4; // how much faster the control loop is than the simulation/step frequency during training. This is needed to aggregate e.g. 4 steps of action history into one step of the policy input
 	static constexpr TI CONTROL_INTERVAL = TRAINING_CONTROL_INTERVAL / CONTROL_MULTIPLE; // 500Hz
 	ACTOR_TYPE::template Buffer<> buffers;
 	static constexpr TI ACTION_HISTORY_LENGTH = 16;
