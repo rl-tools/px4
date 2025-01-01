@@ -130,7 +130,7 @@ private:
 	static constexpr TI ACTION_HISTORY_LENGTH = 16;
 	static constexpr TI ACTION_DIM = 4;
     static constexpr T HOVERING_THROTTLE = 0.66;
-	static constexpr TI EXPECTED_INPUT_DIM = 3 + 9 + 3 + 3 + ACTION_HISTORY_LENGTH * ACTION_DIM;
+	static constexpr TI EXPECTED_INPUT_DIM = 3 + 9 + 3 + 3 + ACTION_HISTORY_LENGTH * ACTION_DIM + 1;
 	static_assert(EXPECTED_INPUT_DIM == rlt::get_last(ACTOR_TYPE::INPUT_SHAPE{}));
 	static_assert(rlt::get_last(ACTOR_TYPE::OUTPUT_SHAPE{}) == ACTION_DIM);
 	// controller buffers 

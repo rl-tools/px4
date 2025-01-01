@@ -258,6 +258,8 @@ void RLtoolsPolicy::rl_tools_control(TI substep, TestObservationMode mode){
             rlt::set(action_history_observation, 0, step_i * RLtoolsPolicy::ACTION_DIM + action_i, action_history[step_i][action_i]);
         }
     }
+    auto parameter_mass_observation = rlt::view(device, input_matrix_view, rlt::matrix::ViewSpec<1, 1>{}, 0, 18 + ACTION_HISTORY_LENGTH * RLtoolsPolicy::ACTION_DIM);
+	rlt::set(parameter_mass_observation, 0, 0, (T)2.0);
 	rlt::Mode<rlt::mode::Evaluation<>> eval_mode;
     rlt::evaluate(device, rl_tools::checkpoint::actor::module, input, output, buffers, rng, eval_mode);
 	// for(TI action_i = 0; action_i < rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM; action_i++){
