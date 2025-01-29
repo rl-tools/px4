@@ -20,6 +20,7 @@ RLtoolsCommander::RLtoolsCommander() : ModuleParams(nullptr), ScheduledWorkItem(
 	overwrite = false;
 	mode = DEFAULT_MODE;
 	trajectory.initialized = false;
+	parameters_update();
 }
 
 RLtoolsCommander::~RLtoolsCommander(){
@@ -35,6 +36,54 @@ bool RLtoolsCommander::init()
 		return false;
 	}
 	return true;
+}
+
+void RLtoolsCommander::parameters_update()
+{
+	// check for parameter updates
+	if (_parameter_update_sub.updated())
+	{
+		parameter_update_s param_update;
+		_parameter_update_sub.copy(&param_update);
+		ModuleParams::updateParams();
+		_xy_vel_i_acc = _param_mpc_xy_vel_i_acc.get() > 0.0f ? _param_mpc_xy_vel_i_acc.get() : _xy_vel_i_acc;
+		_z_vel_i_acc = _param_mpc_z_vel_i_acc.get() > 0.0f ? _param_mpc_z_vel_i_acc.get() : _z_vel_i_acc;
+		_rollrate_i = _param_mc_rollrate_i.get() > 0.0f ? _param_mc_rollrate_i.get() : _rollrate_i;
+		_pitchrate_i = _param_mc_pitchrate_i.get() > 0.0f ? _param_mc_pitchrate_i.get() : _pitchrate_i;
+		_yawrate_i = _param_mc_yawrate_i.get() > 0.0f ? _param_mc_yawrate_i.get() : _yawrate_i;
+	}
+}
+
+void RLtoolsCommander::toggle_integral_gain(bool use_model)
+{
+	if (use_model)
+	{
+		_param_mpc_xy_vel_i_acc.set(0.0f);
+		_param_mpc_xy_vel_i_acc.commit();
+		_param_mpc_z_vel_i_acc.set(0.0f);
+		_param_mpc_z_vel_i_acc.commit();
+		_param_mc_rollrate_i.set(0.0f);
+		_param_mc_rollrate_i.commit();
+		_param_mc_pitchrate_i.set(0.0f);
+		_param_mc_pitchrate_i.commit();
+		_param_mc_yawrate_i.set(0.0f);
+		_param_mc_yawrate_i.commit();
+		PX4_INFO("Integral gain removed");
+	}
+	else
+	{
+		_param_mpc_xy_vel_i_acc.set(_xy_vel_i_acc);
+		_param_mpc_xy_vel_i_acc.commit();
+		_param_mpc_z_vel_i_acc.set(_z_vel_i_acc);
+		_param_mpc_z_vel_i_acc.commit();
+		_param_mc_rollrate_i.set(_rollrate_i);
+		_param_mc_rollrate_i.commit();
+		_param_mc_pitchrate_i.set(_pitchrate_i);
+		_param_mc_pitchrate_i.commit();
+		_param_mc_yawrate_i.set(_yawrate_i);
+		_param_mc_yawrate_i.commit();
+		PX4_INFO("Integral gain restored");
+	}
 }
 
 void RLtoolsCommander::FigureEight::update(hrt_abstime now){
@@ -62,6 +111,7 @@ void RLtoolsCommander::FigureEight::update(hrt_abstime now){
 void RLtoolsCommander::Run()
 {
 	if (should_exit()) {
+		toggle_integral_gain(false);
 		_vehicle_local_position_sub.unregisterCallback();
 		ScheduleClear();
 		exit_and_cleanup();
@@ -72,6 +122,8 @@ void RLtoolsCommander::Run()
 
 	bool prev_command_active = command_active;
 	bool next_command_active = command_active;
+
+	parameters_update();
 
 	{
 		manual_control_setpoint_s manual_control_input;
@@ -145,6 +197,7 @@ void RLtoolsCommander::Run()
 		else{
 			PX4_INFO("Command disabled");
 		}
+		toggle_integral_gain(next_command_active);
 	}
 
 	command_active = next_command_active;

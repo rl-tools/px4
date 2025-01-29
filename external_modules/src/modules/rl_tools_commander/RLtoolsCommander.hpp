@@ -13,6 +13,7 @@
 #include <uORB/Subscription.hpp>
 #include <uORB/SubscriptionCallback.hpp>
 #include <uORB/topics/rl_tools_command.h>
+#include <uORB/topics/parameter_update.h>
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/tune_control.h>
@@ -73,8 +74,10 @@ private:
 		STEP_RESPONSE = 2
 	};
 
-
+	void parameters_update();
+	void toggle_integral_gain(bool use_model);
 	
+	uORB::SubscriptionInterval _parameter_update_sub{ ORB_ID(parameter_update), 1_s };
 	uORB::Subscription _manual_control_input_sub{ORB_ID(manual_control_input)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_local_position_sub{this, ORB_ID(vehicle_local_position)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_sub{this, ORB_ID(vehicle_attitude)};
@@ -104,4 +107,19 @@ private:
 	float step_response_offset[3] = {1, 0, 0};
 
 	perf_counter_t	_loop_interval_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": interval")};
+
+	// integral gain parameters
+	float _xy_vel_i_acc = 0.0f;
+	float _z_vel_i_acc = 0.0f;
+	float _rollrate_i = 0.0f;
+	float _pitchrate_i = 0.0f;
+	float _yawrate_i = 0.0f;
+
+	DEFINE_PARAMETERS(
+		(ParamFloat<px4::params::MPC_XY_VEL_I_ACC>)_param_mpc_xy_vel_i_acc,
+		(ParamFloat<px4::params::MPC_Z_VEL_I_ACC>)_param_mpc_z_vel_i_acc,
+		(ParamFloat<px4::params::MC_ROLLRATE_I>)_param_mc_rollrate_i,
+		(ParamFloat<px4::params::MC_PITCHRATE_I>)_param_mc_pitchrate_i,
+		(ParamFloat<px4::params::MC_YAWRATE_I>)_param_mc_yawrate_i
+	)
 };
