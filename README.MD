@@ -121,7 +121,11 @@ GTK_PATH= make px4_sitl gz_x500 EXTERNAL_MODULES_LOCATION=$(cd .. && cd external
 HITL but the dynamics simulation is running on the flight controller
 - cd `px4_autopilot`
 - Build and upload (mind to check the device path) `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8 upload SERIAL_PORT=/dev/ttyACM0`
-- Run mavproxy (because when using JMavSim as the relay the Mavlink console did not work): `mavproxy.py --master=/dev/ttyACM0 --baud=921600     --out=udp:127.0.0.1:4560     --out=udp:127.0.0.1:14550`
+  - If you run Ubuntu 24.04 (not supported by the PX4 toolchain): Build in docker 
+    - `docker build . -t rl-tools/px4`
+    - `docker run -it --rm -w /rl-tools/embedded_platforms/px4/px4_autopilot -v $(cd ../../ && pwd):/rl-tools rl-tools/px4 bash -c 'make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8'`
+    - Upload the `.px4` using QGroundControl
+- Run mavproxy (because when using JMavSim as the relay the Mavlink console did not work): `mavproxy.py --master=/dev/ttyACM0 --baud=921600 --out=udp:127.0.0.1:4560 --out=udp:127.0.0.1:14550 || mavproxy.py --master=/dev/ttyACM1 --baud=921600 --out=udp:127.0.0.1:4560 --out=udp:127.0.0.1:14550`
 
 - Run JMavSim in simulation only mode (default UDP port: `4560`): `./Tools/simulation/jmavsim/jmavsim_run.sh -q -u -o`
 
