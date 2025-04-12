@@ -122,8 +122,13 @@ HITL but the dynamics simulation is running on the flight controller
 - cd `px4_autopilot`
 - Build and upload (mind to check the device path) `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8 upload SERIAL_PORT=/dev/ttyACM0`
   - If you run Ubuntu 24.04 (not supported by the PX4 toolchain): Build in docker 
-    - `docker build . -t rl-tools/px4`
-    - `docker run -it --rm -w /rl-tools/embedded_platforms/px4/px4_autopilot -v $(cd ../../ && pwd):/rl-tools rl-tools/px4 bash -c 'make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8'`
+    - `docker build . -t rltools/px4`
+    - `docker network create rl-tools-px4`
+    - `distclean` for good measure: `docker run -it --rm -w /rl-tools/embedded_platforms/px4/px4_autopilot -v $(cd ../../ && pwd):/rl-tools rltools/px4 bash -c 'make distclean'`
+    - `docker run -it --rm -w /rl-tools/embedded_platforms/px4/px4_autopilot -v $(cd ../../ && pwd):/rl-tools rltools/px4 bash -c 'DONT_RUN=1 make px4_sitl EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules &&
+ pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8'`
+    - `docker run -it --rm --name rl-tools-px4 --network host --hostname rl-tools-px4 -w /rl-tools/embedded_platforms/px4/px4_autopilot -v $(cd ../../ && pwd):/rl-tools rltools/px4 bash -c 'PX4_SYS_AUTOSTART=4001 PX4_GZ_MODEL=x500 HEADLESS=1 ./build/px4_sitl_default/bin/px4'`
+    - Run the client GUI: `xhost +local:docker && docker run --rm --network host -it --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --volume /tmp/.X11-unix:/tmp/.X11-unix:rw rltools/px4 bash -c 'GZ_PARTITION=rl-tools-px4:root GZ_SIM_RESOURCE_PATH=/px4-autopilot/Tools/simulation/gz/models gz sim'` note: Gazebo has some auto-discovery and global partition namespace, which is set based on the `--hostname` of the server
     - Upload the `.px4` using QGroundControl
 - Run mavproxy (because when using JMavSim as the relay the Mavlink console did not work): `mavproxy.py --master=/dev/ttyACM0 --baud=921600 --out=udp:127.0.0.1:4560 --out=udp:127.0.0.1:14550 || mavproxy.py --master=/dev/ttyACM1 --baud=921600 --out=udp:127.0.0.1:4560 --out=udp:127.0.0.1:14550`
 
