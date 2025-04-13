@@ -14,15 +14,19 @@ cd rl_tools
 git submodule update --init --recursive embedded_platforms/px4
 ```
 
-## Docker Build Environment (Optional)
-```
-cd rl_tools/embedded_platforms/px4
-docker run -it --rm -v $(cd .. && cd .. && pwd):/rl_tools -w /rl_tools/embedded_platforms/px4/px4_autopilot rltools/px4
-make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8
-```
+## Integration
 
-[//]: # (Add `CONFIG_MODULES_BACKPROP_TOOLS_BENCHMARK=y` in the boards `px4config.default` &#40;of whichever board you are using&#41;)
-You might have to make space (flash) for the module e.g. by disabling unnecessary modules in the `px4config.default` file of your board (e.g. `./px4_autopilot/boards/mro/pixracerpro/default.px4board`):
+### Integrating with a different board/vendor platform
+
+This repo already integrates a modified PX4 that integrates the policy modules but if you want to integrate it in additional boards:
+
+Add the following to the `default.px4board` (e.g. `./px4_autopilot/boards/mro/pixracerpro/default.px4board`)
+CONFIG_MODULES_ACTUATOR_MOTORS_MULTIPLEXER=y
+CONFIG_MODULES_RL_TOOLS_BENCHMARK=y
+CONFIG_MODULES_RL_TOOLS_POLICY=y
+
+You might have to make space (flash) for the module e.g. by disabling unnecessary modules in the `px4config.default` file of your board :
+
 ```
 CONFIG_DRIVERS_CAMERA_CAPTURE=n
 CONFIG_DRIVERS_CAMERA_TRIGGER=n
@@ -31,38 +35,34 @@ CONFIG_DRIVERS_UAVCAN=n
 CONFIG_MODULES_CAMERA_FEEDBACK=n
 ```
 
+
+
 Main CMakeList:
 - Move the loading of external modules to after then "include(px4_add_library)"
 - Change to c++17 in the main
 
 Build with (after changing the path to wherever this repository is located)::
 ```
-cd px4_autopilot
-make mro_pixracerpro_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8
+docker run -it --rm -w /rl-tools/embedded_platforms/px4/px4_autopilot -v $(cd ../../ && pwd):/rl-tools rltools/px4 bash -c 'make distclean && make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8'
 ````
-Flash with:
-```
-make mro_pixracerpro_default upload
-```
+Flash with `make mro_pixracerpro_default upload` or using QGroundControl.
 
 For other boards you can substitute `mro_pixracerpro_default` with the appropriate board name (e.g. `px4_fmu-v6c_default`) and conduct changes in the corresponding `default.px4board` file.
 
+## Usage (Policy):
+- The policy is triggered by the `AUX1` channel, so you should map it in the QGroundControl to a trigger on you remote control. It is best to use a switch that automatically goes back, so you can test the policy for a split second (the controller will switch back to the original controller).
+- You can test the switching (without a battery connected) by looking at the `dmesg` output in the QGroundControl console after pulling the trigger
+- Make sure that you have a good position reference (e.g. GPS) because the policy will try to hover in place (where the trigger was activated)
+- It is highly recommended to test your policies in the HITL simulation at first
+- Make sure that the dynamics (parameters) of the simulation match the real drone!
+- Flying is on your own risk!
 
-For the SITL simulation you can use the following form:
+## Usage (Benchmark):
+- Go into the QGroundControl console
+- Start module: `rl_tools_benchmark start`
+- Watch printed output: `dmesg`
 
-```
-make px4_sitl gz_x500 EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd)
-```
-
-
-HITL
-1. Enable the simulation quadrotor (x) in QGroundControl
-2. Disable the automatic connection to the Pixhawk in QGroundControl
-3. Compile and update firmware `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd)`
-4. Compile gazebo sitl/hitl `DONT_RUN=1 make px4_sitl_default gazebo-classic`
-5. Source gazebo stuff `source Tools/simulation/gazebo-classic/setup_gazebo.bash $(pwd) $(pwd)/build/px4_sitl_default`
-6. Start gazebo (classic) `gazebo Tools/simulation/gazebo-classic/sitl_gazebo-classic/worlds/hitl_iris.world`
-7. Start QGroundControl (connects over UDP to the forwarded MAVLINK)
+## Configuration
 
 Note: It is recommended to disable the landing detection (which might trigger in-flight when using the trained policy):
 ```
@@ -83,33 +83,16 @@ Make sure that the PX4 `IMU_GYRO_RATEMAX` setting is matching the rate that is [
 
 Note to activate the policy using a dead man's switch the aux passthrough should be activated in QGC.
 
-## Usage (Policy):
-- The policy is triggered by the `AUX1` channel, so you should map it in the QGroundControl to a trigger on you remote control. It is best to use a switch that automatically goes back, so you can test the policy for a split second (the controller will switch back to the original controller).
-- You can test the switching (without a battery connected) by looking at the `dmesg` output in the QGroundControl console after pulling the trigger
-- Make sure that you have a good position reference (e.g. GPS) because the policy will try to hover in place (where the trigger was activated)
-- It is highly recommended to test your policies in the HITL simulation at first
-- Make sure that the dynamics (parameters) of the simulation match the real drone!
-- Flying is on your own risk!
 
-## Usage (Benchmark):
-- Go into the QGroundControl console
-- Start module: `rl_tools_benchmark start`
-- Watch printed output: `dmesg`
+## Hardware in the Loop (HITL)
+1. Enable the simulation quadrotor (x) in QGroundControl
+2. Disable the automatic connection to the Pixhawk in QGroundControl
+3. Compile and update firmware `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd)`
+4. Compile gazebo sitl/hitl `DONT_RUN=1 make px4_sitl_default gazebo-classic`
+5. Source gazebo stuff `source Tools/simulation/gazebo-classic/setup_gazebo.bash $(pwd) $(pwd)/build/px4_sitl_default`
+6. Start gazebo (classic) `gazebo Tools/simulation/gazebo-classic/sitl_gazebo-classic/worlds/hitl_iris.world`
+7. Start QGroundControl (connects over UDP to the forwarded MAVLINK)
 
-
-
-## Building the Docker Container
-```
-docker build -t rltools/px4 .
-```
-
-
-
-## Reactivating
-1. Ubuntu 24.04: Check out `main` to use the new `./Tools/setup/ubuntu.sh` script.
-2. `git checkout v1.15.2`
-3. `make px4_fmu-v6c_default` to test if the compilation works
-4. `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8`
 
 
 ## Software in the Loop (SITL)
@@ -186,3 +169,11 @@ HITL but the dynamics simulation is running on the flight controller
 - QGroundControl (set autoconnect to UDP only)
 
 - Set the `SIH_*` dynamics parameters to match the model the policy was trained for (for the Crazyflie e.g. `external_modules/src/modules/rl_tools_policy/crazyflie_sih.params`)
+
+## Notes on v1.15 and Ubuntu 24.04
+Note that the Pixracer pro does not properly support 1.15 due to the [compass not found issue](https://github.com/PX4/PX4-Autopilot/issues/23552). Also Ubuntu 24.04 is not well supported by the build system (some compiler mismatch) and SITL. If you still want to try your luck:
+1. Ubuntu 24.04: Check out `main` to use the new `./Tools/setup/ubuntu.sh` script.
+2. `git checkout v1.15.2`
+3. `make px4_fmu-v6c_default` to test if the compilation works
+4. `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8`
+
