@@ -6,6 +6,8 @@ px4_add_module(
 	STACK_MAIN 2000
 	SRCS
 		RLtoolsCommander.cpp
+	MODULE_CONFIG
+		module.yaml
 	EXTERNAL
 	)
 

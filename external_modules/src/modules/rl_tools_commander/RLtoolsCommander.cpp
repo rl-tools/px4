@@ -36,6 +36,18 @@ bool RLtoolsCommander::init()
 	}
 	return true;
 }
+void RLtoolsCommander::parameters_update(){
+	auto activ_src_pre = _rlt_activ_src.get();
+	auto activ_btn_pre = _rlt_activ_btn.get();
+	if (_parameter_update_sub.updated()) {
+		parameter_update_s param_update;
+		_parameter_update_sub.copy(&param_update);
+		updateParams();
+	}
+	if (activ_src_pre != _rlt_activ_src.get() || activ_btn_pre != _rlt_activ_btn.get()){
+		PX4_INFO("Parameter updated: activ_src=%d, activ_btn=%d", _rlt_activ_src.get(), _rlt_activ_btn.get());
+	}
+}
 
 void RLtoolsCommander::FigureEight::update(hrt_abstime now){
 	if(!initialized){
@@ -67,6 +79,7 @@ void RLtoolsCommander::Run()
 		exit_and_cleanup();
 		return;
 	}
+	this->parameters_update();
 
 	hrt_abstime current_time = hrt_absolute_time();
 
@@ -78,7 +91,12 @@ void RLtoolsCommander::Run()
 		if(_manual_control_input_sub.update(&manual_control_input)) {
 			last_rc_update_time_set = true;
 			last_rc_update_time = current_time;
-			next_command_active = manual_control_input.aux1 >= 0.5f;
+			if(_rlt_activ_src.get() == 0){
+				next_command_active = manual_control_input.aux1 >= 0.5f;
+			}
+			else{
+				next_command_active = (manual_control_input.buttons & (1 << _rlt_activ_btn.get())) != 0;
+			}
 		}
 	}
 	if(overwrite){

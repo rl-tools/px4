@@ -1,0 +1,21 @@
+module_name: RLToolsCommander
+parameters:
+    - group: RLtools
+      definitions:
+        RLT_ACTIV_SRC:
+          description:
+            short: Use AUX1 / MAVLink MANUAL_CONTROL button for activation
+            long: |
+              Whether to AUX1 or a MAVLink MANUAL_CONTROL button for the activation of the policy.
+          type: enum
+          values:
+              0: AUX1
+              1: MAVLink MANUAL_CONTROL
+          default: 0
+        RLT_ACTIV_BTN:
+          description:
+            short: RLtools policy activation button index
+            long: |
+              The button number (you can e.g. check it in QGroundControl under the Joystick section)
+          type: int32
+          default: 0

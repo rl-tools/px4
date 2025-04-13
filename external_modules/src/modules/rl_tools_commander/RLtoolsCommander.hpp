@@ -5,6 +5,7 @@
 #include <px4_platform_common/module_params.h>
 #include <px4_platform_common/posix.h>
 #include <px4_platform_common/px4_work_queue/ScheduledWorkItem.hpp>
+#include <px4_platform_common/module_params.h>
 
 #include <drivers/drv_hrt.h>
 #include <lib/perf/perf_counter.h>
@@ -17,6 +18,7 @@
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/tune_control.h>
 #include <uORB/topics/manual_control_setpoint.h>
+#include <uORB/topics/parameter_update.h>
 
 using namespace time_literals;
 
@@ -73,8 +75,14 @@ private:
 		STEP_RESPONSE = 2
 	};
 
+	void parameters_update();
 
-	
+	DEFINE_PARAMETERS(
+		(ParamInt<px4::params::RLT_ACTIV_SRC>) _rlt_activ_src,
+		(ParamInt<px4::params::RLT_ACTIV_BTN>) _rlt_activ_btn
+	)
+
+	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
 	uORB::Subscription _manual_control_input_sub{ORB_ID(manual_control_input)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_local_position_sub{this, ORB_ID(vehicle_local_position)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_sub{this, ORB_ID(vehicle_attitude)};
