@@ -1,13 +1,6 @@
 #include "RLtoolsPolicy.hpp"
 
 RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::rate_ctrl){
-	rlt::malloc(device, buffers);
-	rlt::malloc(device, input);
-	rlt::malloc(device, output);
-
-	rlt::init(device, rng, 0);
-
-	this->clear_action_history();
 	// node state
 	timestamp_last_angular_velocity_set = false;
 	timestamp_last_local_position_set = false;
@@ -18,21 +11,19 @@ RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_
 	timeout_message_sent = false;
 	timestamp_last_policy_frequency_check_set = false;
 
-	// controller state
-	// timestamp_last_forward_pass_set = false;
-	controller_tick = 0;
-	controller_tick_substep_offset = 0;
-
 	_actuator_motors_rl_tools_pub.advertise();
+}
+void RLtoolsPolicy::reset(){
+	for(int action_i=0; action_i < RL_TOOLS_INTERFACE_APPLICATIONS_L2F_ACTION_DIM; action_i++){
+		this->previous_action[action_i] = 0.5;
+	}
+	rl_tools_inference_applications_l2f_reset();
 }
 
 RLtoolsPolicy::~RLtoolsPolicy()
 {
 	perf_free(_loop_perf);
 	perf_free(_loop_interval_perf);
-	rlt::free(device, buffers);
-	rlt::free(device, input);
-	rlt::free(device, output);
 }
 
 bool RLtoolsPolicy::init()
@@ -52,26 +43,16 @@ bool RLtoolsPolicy::init()
 		return false;
 	}
 
-	auto input_sample = rlt::view<1>(device, rl_tools::checkpoint::example::input::container, 0);
-	hrt_abstime start, end;
-	start = hrt_absolute_time();
-	rlt::Mode<rlt::mode::Evaluation<>> mode;
-	rlt::evaluate(device, rl_tools::checkpoint::actor::module, input_sample, output, buffers, rng, mode);
-	end = hrt_absolute_time();
-	T inference_frequency = (T)1.0/((T)(end - start)/1e6);
-	PX4_INFO("rl_tools_benchmark: %dHz", (int)(inference_frequency));
-	
-	T abs_error = 0;
-	constexpr T EPSILON = 1e-6;
-
-	for(TI batch_i = 0; batch_i < BATCH_SIZE; batch_i++){
-		for(TI output_i = 0; output_i < RLtoolsPolicy::ACTION_DIM; output_i++){
-			T abs_diff = rlt::get(device, output, 0, batch_i, output_i) - rlt::get(device, rl_tools::checkpoint::example::output::container, 0, batch_i, output_i);
-			PX4_INFO("output[%d][%d]: %f (diff %f)", batch_i, output_i, rlt::get(device, output, 0, batch_i, output_i), abs_diff);
-		}
+	RLtoolsInferenceApplicationsL2FAction action;
+	float abs_diff = rl_tools_inference_applications_l2f_test(&action);
+	PX4_INFO("Checkpoint test diff: %f", abs_diff);
+	for(TI output_i = 0; output_i < RL_TOOLS_INTERFACE_APPLICATIONS_L2F_ACTION_DIM; output_i++){
+		PX4_INFO("output[%d]: %f", output_i, action.action[output_i]);
 	}
 
-	return abs_error < EPSILON;
+	constexpr float EPSILON = 1e-7;
+
+	return abs_diff < EPSILON;
 }
 template <typename T>
 T clip(T x, T max, T min){
@@ -156,12 +137,8 @@ void rotate_vector(T R[9], T v[3], T v_rotated[3]){
 	v_rotated[2] = R[6] * v[0] + R[7] * v[1] + R[8] * v[2];
 }
 
-template <typename OBS_SPEC>
-void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, TestObservationMode mode){
-	using T = typename OBS_SPEC::T;
+void RLtoolsPolicy::observe(RLtoolsInferenceApplicationsL2FObservation& observation, TestObservationMode mode){
 	// converting from FRD to FLU
-    static_assert(OBS_SPEC::ROWS == 1);
-    static_assert(OBS_SPEC::COLS == 18);
 	T qd[4] = {1, 0, 0, 0}, Rt_inv[9];
 	if(mode >= TestObservationMode::ORIENTATION){
 		// FRD to FLU
@@ -189,15 +166,16 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, 
 		// qd = qt' * qr
 		quaternion_multiplication(qtc, qr, qd);
 
-		rlt::set(observation, 0,  3 + 0, quaternion_to_rotation_matrix<T, 0>(qd));
-		rlt::set(observation, 0,  3 + 1, quaternion_to_rotation_matrix<T, 1>(qd));
-		rlt::set(observation, 0,  3 + 2, quaternion_to_rotation_matrix<T, 2>(qd));
-		rlt::set(observation, 0,  3 + 3, quaternion_to_rotation_matrix<T, 3>(qd));
-		rlt::set(observation, 0,  3 + 4, quaternion_to_rotation_matrix<T, 4>(qd));
-		rlt::set(observation, 0,  3 + 5, quaternion_to_rotation_matrix<T, 5>(qd));
-		rlt::set(observation, 0,  3 + 6, quaternion_to_rotation_matrix<T, 6>(qd));
-		rlt::set(observation, 0,  3 + 7, quaternion_to_rotation_matrix<T, 7>(qd));
-		rlt::set(observation, 0,  3 + 8, quaternion_to_rotation_matrix<T, 8>(qd));
+		observation.orientation[0] = qd[0];
+		observation.orientation[1] = qd[1];
+		observation.orientation[2] = qd[2];
+		observation.orientation[3] = qd[3];
+	}
+	else{
+		observation.orientation[0] = 1;
+		observation.orientation[1] = 0;
+		observation.orientation[2] = 0;
+		observation.orientation[3] = 0;
 	}
 	if(mode >= TestObservationMode::POSITION){
 		T p[3], pt[3]; // FLU
@@ -205,14 +183,14 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, 
 		p[1] = -(_vehicle_local_position.y - _rl_tools_command.target_position[1]);
 		p[2] = -(_vehicle_local_position.z - _rl_tools_command.target_position[2]);
 		rotate_vector(Rt_inv, p, pt);
-		rlt::set(observation, 0,  0 + 0, clip(pt[0], max_position_error, -max_position_error));
-		rlt::set(observation, 0,  0 + 1, clip(pt[1], max_position_error, -max_position_error));
-		rlt::set(observation, 0,  0 + 2, clip(pt[2], max_position_error, -max_position_error));
+		observation.position[0] = clip(pt[0], max_position_error, -max_position_error);
+		observation.position[1] = clip(pt[1], max_position_error, -max_position_error);
+		observation.position[2] = clip(pt[2], max_position_error, -max_position_error);
 	}
 	else{
-		rlt::set(observation, 0,  0 + 0, 0);
-		rlt::set(observation, 0,  0 + 1, 0);
-		rlt::set(observation, 0,  0 + 2, 0);
+		observation.position[0] = 0;
+		observation.position[1] = 0;
+		observation.position[2] = 0;
 	}
 	if(mode >= TestObservationMode::LINEAR_VELOCITY){
 		T v[3], vt[3];
@@ -220,66 +198,61 @@ void RLtoolsPolicy::observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, 
 		v[1] = -(_vehicle_local_position.vy - _rl_tools_command.target_linear_velocity[1]);
 		v[2] = -(_vehicle_local_position.vz - _rl_tools_command.target_linear_velocity[2]);
 		rotate_vector(Rt_inv, v, vt);
-		rlt::set(observation, 0, 12 + 0, clip(vt[0], max_velocity_error, -max_velocity_error));
-		rlt::set(observation, 0, 12 + 1, clip(vt[1], max_velocity_error, -max_velocity_error));
-		rlt::set(observation, 0, 12 + 2, clip(vt[2], max_velocity_error, -max_velocity_error));
+		observation.linear_velocity[0] = clip(vt[0], max_velocity_error, -max_velocity_error);
+		observation.linear_velocity[1] = clip(vt[1], max_velocity_error, -max_velocity_error);
+		observation.linear_velocity[2] = clip(vt[2], max_velocity_error, -max_velocity_error);
 	}
 	else{
-		rlt::set(observation, 0, 12 + 0, 0);
-		rlt::set(observation, 0, 12 + 1, 0);
-		rlt::set(observation, 0, 12 + 2, 0);
+		observation.linear_velocity[0] = 0;
+		observation.linear_velocity[1] = 0;
+		observation.linear_velocity[2] = 0;
 	}
 	if(mode >= TestObservationMode::ANGULAR_VELOCITY){
-		rlt::set(observation, 0, 15 + 0, +_vehicle_angular_velocity.xyz[0]);
-		rlt::set(observation, 0, 15 + 1, -_vehicle_angular_velocity.xyz[1]);
-		rlt::set(observation, 0, 15 + 2, -_vehicle_angular_velocity.xyz[2]);
+		observation.angular_velocity[0] = +_vehicle_angular_velocity.xyz[0];
+		observation.angular_velocity[1] = -_vehicle_angular_velocity.xyz[1];
+		observation.angular_velocity[2] = -_vehicle_angular_velocity.xyz[2];
 	}
 	else{
-		rlt::set(observation, 0, 15 + 0, 0);
-		rlt::set(observation, 0, 15 + 1, 0);
-		rlt::set(observation, 0, 15 + 2, 0);
-
+		observation.angular_velocity[0] = 0;
+		observation.angular_velocity[1] = 0;
+		observation.angular_velocity[2] = 0;
+	}
+	for(int action_i=0; action_i < RL_TOOLS_INTERFACE_APPLICATIONS_L2F_ACTION_DIM; action_i++){
+		observation.previous_action[action_i] = this->previous_action[action_i];
 	}
 }
-void RLtoolsPolicy::clear_action_history(){
-	for(TI step_i = 0; step_i < ACTION_HISTORY_LENGTH; step_i++){
-		for(TI action_i = 0; action_i < RLtoolsPolicy::ACTION_DIM; action_i++){
-			action_history[step_i][action_i] = RLtoolsPolicy::HOVERING_THROTTLE;
-		}
-	}
-}
-void RLtoolsPolicy::rl_tools_control(TI substep, TestObservationMode mode){
-	auto input_matrix_view = rlt::matrix_view(device, input);
-    auto state_rotation_matrix_input = rlt::view(device, input_matrix_view, rlt::matrix::ViewSpec<1, 18>{}, 0, 0);
-    observe_rotation_matrix(state_rotation_matrix_input, mode);
-    auto action_history_observation = rlt::view(device, input_matrix_view, rlt::matrix::ViewSpec<1, ACTION_HISTORY_LENGTH * RLtoolsPolicy::ACTION_DIM>{}, 0, 18);
-    for(TI step_i = 0; step_i < ACTION_HISTORY_LENGTH; step_i++){
-        for(TI action_i = 0; action_i < RLtoolsPolicy::ACTION_DIM; action_i++){
-            rlt::set(action_history_observation, 0, step_i * RLtoolsPolicy::ACTION_DIM + action_i, action_history[step_i][action_i]);
-        }
-    }
-    auto parameter_mass_observation = rlt::view(device, input_matrix_view, rlt::matrix::ViewSpec<1, 1>{}, 0, 18 + ACTION_HISTORY_LENGTH * RLtoolsPolicy::ACTION_DIM);
-	rlt::set(parameter_mass_observation, 0, 0, (T)2.0);
-	rlt::Mode<rlt::mode::Evaluation<>> eval_mode;
-    rlt::evaluate(device, rl_tools::checkpoint::actor::module, input, output, buffers, rng, eval_mode);
-	// for(TI action_i = 0; action_i < rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM; action_i++){
-	// 	set(output, 0, action_i, 0.1);
-	// }
-    if(substep == 0){
-        for(TI step_i = 0; step_i < ACTION_HISTORY_LENGTH - 1; step_i++){
-            for(TI action_i = 0; action_i < RLtoolsPolicy::ACTION_DIM; action_i++){
-                action_history[step_i][action_i] = action_history[step_i + 1][action_i];
-            }
-        }
-    }
-    for(TI action_i = 0; action_i < RLtoolsPolicy::ACTION_DIM; action_i++){
-        T value = action_history[ACTION_HISTORY_LENGTH - 1][action_i];
-        value *= substep;
-        value += rlt::get(device, output, 0, 0, action_i);
-        value /= substep + 1;
-        action_history[ACTION_HISTORY_LENGTH - 1][action_i] = value;
-    }
-}
+// void RLtoolsPolicy::rl_tools_control(TI substep, TestObservationMode mode){
+// 	auto input_matrix_view = rlt::matrix_view(device, input);
+//     auto state_rotation_matrix_input = rlt::view(device, input_matrix_view, rlt::matrix::ViewSpec<1, 18>{}, 0, 0);
+//     observe_rotation_matrix(state_rotation_matrix_input, mode);
+//     auto action_history_observation = rlt::view(device, input_matrix_view, rlt::matrix::ViewSpec<1, ACTION_HISTORY_LENGTH * RLtoolsPolicy::ACTION_DIM>{}, 0, 18);
+//     for(TI step_i = 0; step_i < ACTION_HISTORY_LENGTH; step_i++){
+//         for(TI action_i = 0; action_i < RLtoolsPolicy::ACTION_DIM; action_i++){
+//             rlt::set(action_history_observation, 0, step_i * RLtoolsPolicy::ACTION_DIM + action_i, action_history[step_i][action_i]);
+//         }
+//     }
+//     auto parameter_mass_observation = rlt::view(device, input_matrix_view, rlt::matrix::ViewSpec<1, 1>{}, 0, 18 + ACTION_HISTORY_LENGTH * RLtoolsPolicy::ACTION_DIM);
+// 	rlt::set(parameter_mass_observation, 0, 0, (T)2.0);
+// 	rlt::Mode<rlt::mode::Evaluation<>> eval_mode;
+//     rlt::evaluate(device, rl_tools::checkpoint::actor::module, input, output, buffers, rng, eval_mode);
+// 	// for(TI action_i = 0; action_i < rl_tools::checkpoint::actor::MODEL::OUTPUT_DIM; action_i++){
+// 	// 	set(output, 0, action_i, 0.1);
+// 	// }
+//     if(substep == 0){
+//         for(TI step_i = 0; step_i < ACTION_HISTORY_LENGTH - 1; step_i++){
+//             for(TI action_i = 0; action_i < RLtoolsPolicy::ACTION_DIM; action_i++){
+//                 action_history[step_i][action_i] = action_history[step_i + 1][action_i];
+//             }
+//         }
+//     }
+//     for(TI action_i = 0; action_i < RLtoolsPolicy::ACTION_DIM; action_i++){
+//         T value = action_history[ACTION_HISTORY_LENGTH - 1][action_i];
+//         value *= substep;
+//         value += rlt::get(device, output, 0, 0, action_i);
+//         value /= substep + 1;
+//         action_history[ACTION_HISTORY_LENGTH - 1][action_i] = value;
+//     }
+// }
 
 void RLtoolsPolicy::Run()
 {
@@ -334,7 +307,7 @@ void RLtoolsPolicy::Run()
 	// 	timestamp_last_manual_control_input = current_time;
 	// }
 
-	constexpr bool PUBLISH_NON_COMPLETE_STATUS = false;
+	constexpr bool PUBLISH_NON_COMPLETE_STATUS = true;
 	if(!angular_velocity_update){
 		status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_NO_ANGULAR_VELOCITY_UPDATE;
 		if constexpr(PUBLISH_NON_COMPLETE_STATUS){
@@ -400,75 +373,45 @@ void RLtoolsPolicy::Run()
 	}
 	bool next_active = !status.command_stale && _rl_tools_command.active;
 	if(!previous_active && next_active){
-		clear_action_history();	
-		PX4_INFO("Clearing Action History");
-		controller_tick_substep_offset = controller_tick % CONTROL_MULTIPLE;
+		this->reset();
+		PX4_INFO("Resetting Inference Executor (Recurrent State)");
 	}
 	status.active = next_active;
-	// if(SCALE_OUTPUT_WITH_THROTTLE && ((current_time - timestamp_last_manual_control_input) > MANUAL_CONTROL_TIMEOUT)){
-	// 	if(!timeout_message_sent){
-	// 		PX4_ERR("manual control input timeout");
-	// 		timeout_message_sent = true;
-	// 	}
-	// 	return;
-	// }
 
 	timeout_message_sent = false;
 
-	// if(timestamp_last_forward_pass_set){
-	// 	if((current_time - timestamp_last_forward_pass) < CONTROL_INTERVAL){
-	// 		return;
-	// 	}
-	// }
-
-    TI substep = (controller_tick-controller_tick_substep_offset) % CONTROL_MULTIPLE;
-	status.substep = substep;
-	T policy_interval = perf_mean(_loop_interval_policy_perf);
-	perf_count(_loop_interval_policy_perf);
-	status.control_interval = policy_interval;
-	rl_tools_control(substep, TEST_OBSERVATION_MODE);
-	if(!timestamp_last_policy_frequency_check_set || (current_time - timestamp_last_policy_frequency_check) > POLICY_FREQUENCY_CHECK_INTERVAL){
-		if(timestamp_last_policy_frequency_check_set){
-			T policy_interval_target_diff = policy_interval * 1e6 - CONTROL_INTERVAL;
-			if(fabs(policy_interval_target_diff) > POLICY_INTERVAL_WARNING_THRESHOLD){
-				PX4_WARN("Policy frequency deviation: %.2fHz (target %.2fHz)", (double)1/policy_interval, (double)1e6/CONTROL_INTERVAL);
-			}
-		}
-		timestamp_last_policy_frequency_check = current_time;
-		timestamp_last_policy_frequency_check_set = true;
-	}
+	RLtoolsInferenceApplicationsL2FObservation observation;
+	RLtoolsInferenceApplicationsL2FAction action;
+	observe(observation, TEST_OBSERVATION_MODE);
+	auto executor_status = rl_tools_inference_applications_l2f_control(current_time * 1000, &observation, &action);
 
 	rl_tools_policy_input_s input_msg;
 	input_msg.active = status.active;
-	constexpr TI STATE_OBSERVATION_DIM = 18;
-	static_assert(rl_tools_policy_input_s::STATE_OBSERVATION_DIM == STATE_OBSERVATION_DIM);
+	static_assert(rl_tools_policy_input_s::ACTION_DIM == RL_TOOLS_INTERFACE_APPLICATIONS_L2F_ACTION_DIM);
 	input_msg.timestamp = current_time;
 	input_msg.timestamp_sample = current_time;
 	input_msg.timestamp_sample = _vehicle_angular_velocity.timestamp_sample;
-	for(TI state_i = 0; state_i < STATE_OBSERVATION_DIM; state_i++){
-		input_msg.state_observation[state_i] = rlt::get(device, input, 0, 0, state_i);
+	for(TI dim_i = 0; dim_i < 3; dim_i++){
+		input_msg.position[dim_i] = observation.position[dim_i];
+		input_msg.orientation[dim_i] = observation.orientation[dim_i];
+		input_msg.linear_velocity[dim_i] = observation.linear_velocity[dim_i];
+		input_msg.angular_velocity[dim_i] = observation.angular_velocity[dim_i];
 	}
-	static_assert(ACTION_HISTORY_LENGTH == rl_tools_policy_input_s::ACTION_HISTORY_LENGTH);
-	static_assert(ACTION_DIM == rl_tools_policy_input_s::ACTION_DIM);
-	for(TI step_i = 0; step_i < ACTION_HISTORY_LENGTH; step_i++){
-		for(TI action_i = 0; action_i < ACTION_DIM; action_i++){
-			input_msg.action_history[step_i*ACTION_DIM + action_i] = action_history[step_i][action_i];
-		}
+	input_msg.orientation[3] = observation.orientation[3];
+	for(TI dim_i = 0; dim_i < RL_TOOLS_INTERFACE_APPLICATIONS_L2F_ACTION_DIM; dim_i++){
+		input_msg.previous_action[dim_i] = observation.previous_action[dim_i];
 	}
 
 	_rl_tools_policy_input_pub.publish(input_msg);
 	_rl_tools_policy_status_pub.publish(status);
 
-	controller_tick++;
-	// timestamp_last_forward_pass = current_time;
-	// timestamp_last_forward_pass_set = true;
-
 	actuator_motors_s actuator_motors;
 	actuator_motors.timestamp = hrt_absolute_time();
 	actuator_motors.timestamp_sample = hrt_absolute_time();
 	for(TI action_i=0; action_i < actuator_motors_s::NUM_CONTROLS; action_i++){
-		if(action_i < RLtoolsPolicy::ACTION_DIM){
-			T value = rlt::get(device, output, 0, 0, action_i);
+		if(action_i < RL_TOOLS_INTERFACE_APPLICATIONS_L2F_ACTION_DIM){
+			T value = action.action[action_i];
+			this->previous_action[action_i] = value;
 			value = (value + 1) / 2;
 			// T scaled_value = value * (SCALE_OUTPUT_WITH_THROTTLE ? (_manual_control_input.throttle + 1)/2 : 0.5);
 			// todo: add simulation check
@@ -481,7 +424,7 @@ void RLtoolsPolicy::Run()
 			actuator_motors.control[action_i] = NAN;
 		}
 	}
-	if(RLtoolsPolicy::REMAP_CRAZYFLIE){
+	if constexpr(RLtoolsPolicy::REMAP_FROM_CRAZYFLIE){
 		actuator_motors_s temp = actuator_motors;
 		temp.control[0] = actuator_motors.control[0];
 		temp.control[1] = actuator_motors.control[2];
@@ -522,7 +465,7 @@ int RLtoolsPolicy::print_status()
 	perf_print_counter(_loop_perf);
 	perf_print_counter(_loop_interval_perf);
 	perf_print_counter(_loop_interval_policy_perf);
-	PX4_INFO_RAW("Checkpoint: %s\n", rl_tools::checkpoint::meta::name);
+	PX4_INFO_RAW("Checkpoint: %s\n", rl_tools_inference_applications_l2f_checkpoint_name());
 	return 0;
 }
 

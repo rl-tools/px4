@@ -12,6 +12,7 @@ px4_add_module(
 		-DARM_MATH_LOOPUNROLL
 	SRCS
 		RLtoolsPolicy.cpp
+		rl_tools_adapter.cpp
 	# DEPENDS
 	# 	px4_work_queue
 	EXTERNAL

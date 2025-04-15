@@ -1,15 +1,6 @@
 #pragma once
 
-// #define RL_TOOLS_NAMESPACE_WRAPPER rl_tools_policy
-#include <rl_tools/operations/arm.h>
-#include <rl_tools/nn/layers/dense/operations_arm/opt.h>
-#include <rl_tools/nn/layers/sample_and_squash/operations_generic.h>
-// #include <rl_tools/nn/layers/dense/operations_arm/dsp.h>
-#include <rl_tools/nn_models/mlp/operations_generic.h>
-#include <rl_tools/nn_models/sequential/operations_generic.h>
-#include "blob/policy.h" // checkout the blob submodule (https://github.com/rl-tools/px4-blob) to make this available
-
-namespace rlt = RL_TOOLS_NAMESPACE_WRAPPER ::rl_tools;
+#include <rl_tools/inference/applications/l2f/c_interface.h>
 
 
 #include <px4_platform_common/defines.h>
@@ -54,8 +45,8 @@ public:
 	int print_status() override;
 
 private:
-	using TI = typename rl_tools::checkpoint::actor::TYPE::SPEC::TI;
-	using T = typename rl_tools::checkpoint::actor::TYPE::SPEC::T;
+	using TI = size_t;
+	using T = float;
 	enum class TestObservationMode: TI{
 		ANGULAR_VELOCITY = 0,
 		ORIENTATION = 1,
@@ -76,8 +67,8 @@ private:
 		return a < b ? a : b;
 	}
 
-	T max_position_error = min(rl_tools::checkpoint::meta::environment::parameters::mdp::init::max_position, rl_tools::checkpoint::meta::environment::parameters::mdp::termination::position_threshold);
-	T max_velocity_error = min(rl_tools::checkpoint::meta::environment::parameters::mdp::init::max_linear_velocity, rl_tools::checkpoint::meta::environment::parameters::mdp::termination::linear_velocity_threshold);
+	T max_position_error = 0.2; // min(rl_tools::checkpoint::meta::environment::parameters::mdp::init::max_position, rl_tools::checkpoint::meta::environment::parameters::mdp::termination::position_threshold);
+	T max_velocity_error = 1.0; // min(rl_tools::checkpoint::meta::environment::parameters::mdp::init::max_linear_velocity, rl_tools::checkpoint::meta::environment::parameters::mdp::termination::linear_velocity_threshold);
 
 	void Run() override;
 
@@ -107,45 +98,26 @@ private:
 	perf_counter_t	_loop_interval_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": interval")};
 	perf_counter_t	_loop_interval_policy_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": interval_policy")};
 
-	using DEV_SPEC = rlt::devices::DefaultARMSpecification;
-	// using DEVICE = rl_tools::devices::arm::DSP<DEV_SPEC>;
-	using DEVICE = rlt::devices::arm::OPT<DEV_SPEC>;
-	DEVICE device;
-	DEVICE::SPEC::RANDOM::ENGINE<> rng;
-	using ACTOR_TYPE_ORIGINAL = rlt::checkpoint::actor::TYPE;
-	static constexpr TI BATCH_SIZE = 1;
-	using ACTOR_TYPE = ACTOR_TYPE_ORIGINAL::template CHANGE_BATCH_SIZE<TI, BATCH_SIZE>;
+	// using DEV_SPEC = rlt::devices::DefaultARMSpecification;
+	// // using DEVICE = rl_tools::devices::arm::DSP<DEV_SPEC>;
+	// using DEVICE = rlt::devices::arm::OPT<DEV_SPEC>;
+	// DEVICE device;
+	// DEVICE::SPEC::RANDOM::ENGINE<> rng;
+	// using ACTOR_TYPE_ORIGINAL = rlt::checkpoint::actor::TYPE;
+	// static constexpr TI BATCH_SIZE = 1;
+	// using ACTOR_TYPE = ACTOR_TYPE_ORIGINAL::template CHANGE_BATCH_SIZE<TI, BATCH_SIZE>;
 
-	template <typename OBS_SPEC>
-	void observe_rotation_matrix(rlt::Matrix<OBS_SPEC>& observation, TestObservationMode mode);
-	void rl_tools_control(TI substep, TestObservationMode mode);
-	void clear_action_history();
+	void reset();
+	void observe(RLtoolsInferenceApplicationsL2FObservation& observation, TestObservationMode mode);
 
-	static constexpr bool REMAP_CRAZYFLIE = false; // PX4 SIH assumes the Quadrotor X configuration, which assumes different rotor positions than the crazyflie mapping (from crazyflie outputs to PX4): 1=>1, 2=>4, 3=>2, 4=>3 
-	static_assert(BATCH_SIZE == 1);
-	static constexpr TI TRAINING_CONTROL_INTERVAL = 10000; // us
-	static constexpr TI CONTROL_MULTIPLE = 4; // how much faster the control loop is than the simulation/step frequency during training. This is needed to aggregate e.g. 4 steps of action history into one step of the policy input
-	static constexpr TI CONTROL_INTERVAL = TRAINING_CONTROL_INTERVAL / CONTROL_MULTIPLE; // 500Hz
-	ACTOR_TYPE::template Buffer<> buffers;
-	static constexpr TI ACTION_HISTORY_LENGTH = 16;
-	static constexpr TI ACTION_DIM = 4;
-    static constexpr T HOVERING_THROTTLE = 0.66;
-	static constexpr TI EXPECTED_INPUT_DIM = 3 + 9 + 3 + 3 + ACTION_HISTORY_LENGTH * ACTION_DIM + 1;
-	static_assert(EXPECTED_INPUT_DIM == rlt::get_last(ACTOR_TYPE::INPUT_SHAPE{}));
-	static_assert(rlt::get_last(ACTOR_TYPE::OUTPUT_SHAPE{}) == ACTION_DIM);
-	// controller buffers 
-	rlt::Tensor<rlt::tensor::Specification<T, TI, ACTOR_TYPE::INPUT_SHAPE, true>> input;
-	rlt::Tensor<rlt::tensor::Specification<T, TI, ACTOR_TYPE::OUTPUT_SHAPE, true>> output;
+	static constexpr bool REMAP_FROM_CRAZYFLIE = true; // Policy (Crazyflie assignment) => Quadrotor (PX4 Quadrotor X assignment) PX4 SIH assumes the Quadrotor X configuration, which assumes different rotor positions than the crazyflie mapping (from crazyflie outputs to PX4): 1=>1, 2=>4, 3=>2, 4=>3 
 	// controller state
-	hrt_abstime timestamp_last_forward_pass;
-	bool timestamp_last_forward_pass_set = false;
-	TI controller_tick = 0;
-	TI controller_tick_substep_offset = 0;
-	T action_history[ACTION_HISTORY_LENGTH][ACTION_DIM];
 
 	// messaging state
 	static constexpr TI POLICY_INTERVAL_WARNING_THRESHOLD = 100; // us
 	static constexpr TI POLICY_FREQUENCY_CHECK_INTERVAL = 1000 * 1000; // 1s
 	hrt_abstime timestamp_last_policy_frequency_check;
 	bool timestamp_last_policy_frequency_check_set = false;
+
+	float previous_action[RL_TOOLS_INTERFACE_APPLICATIONS_L2F_ACTION_DIM];
 };

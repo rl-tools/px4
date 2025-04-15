@@ -2,8 +2,9 @@
 uint64 timestamp
 uint64 timestamp_sample
 bool active
-uint8 STATE_OBSERVATION_DIM = 18
-float32[18] state_observation
-uint8 ACTION_HISTORY_LENGTH = 16
+float32[3] position
+float32[4] orientation # w, x, y, z
+float32[3] linear_velocity
+float32[3] angular_velocity
 uint8 ACTION_DIM = 4
-float32[64] action_history
+float32[4] previous_action
