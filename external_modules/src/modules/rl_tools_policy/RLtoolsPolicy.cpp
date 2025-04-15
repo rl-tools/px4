@@ -390,9 +390,9 @@ void RLtoolsPolicy::Run()
 	_rl_tools_policy_input_pub.publish(input_msg);
 	_rl_tools_policy_status_pub.publish(status);
 
-	actuator_motors_s actuator_motors;
+	actuator_motors_s actuator_motors = {}; // zero initialize to set e.g. the reversible_flags to all 0
 	actuator_motors.timestamp = hrt_absolute_time();
-	actuator_motors.timestamp_sample = hrt_absolute_time();
+	actuator_motors.timestamp_sample = _vehicle_angular_velocity.timestamp_sample;
 	for(TI action_i=0; action_i < actuator_motors_s::NUM_CONTROLS; action_i++){
 		if(action_i < RL_TOOLS_INTERFACE_APPLICATIONS_L2F_ACTION_DIM){
 			T value = action.action[action_i];

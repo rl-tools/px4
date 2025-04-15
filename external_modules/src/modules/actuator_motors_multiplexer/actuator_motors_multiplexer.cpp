@@ -156,30 +156,27 @@ void ActuatorMotorsMultiplexer::Run()
 	}
     actuator_motors_s actuator_motors_mux;
 	bool actuator_motors_mux_set = false;
-	if(this->use_original_controller){
-		if(actuator_motors_set){
-			actuator_motors_mux = actuator_motors;
-			actuator_motors_mux_set	= true;
-		}
+	if(this->use_original_controller && actuator_motors_set){
+		actuator_motors_mux = actuator_motors;
+		actuator_motors_mux_set	= true;
 	}
-	else{
-		if(actuator_motors_rl_tools_set){
-			actuator_motors_mux = actuator_motors_rl_tools;
-			// float multiplier = 0.5;
-			// for(int control_i = 0; control_i < actuator_motors_s::NUM_CONTROLS; control_i++){
-			// 	if(std::isnan(actuator_motors_mux.control[control_i])){
-			// 		actuator_motors_mux.control[control_i] *= multiplier;
-			// 	}
-			// }
-			actuator_motors_mux_set	= true;
-		}
+	if(!this->use_original_controller && actuator_motors_rl_tools_set){
+		actuator_motors_mux = actuator_motors_rl_tools;
+
+		// float multiplier = 0.5;
+		// for(int control_i = 0; control_i < actuator_motors_s::NUM_CONTROLS; control_i++){
+		// 	if(std::isnan(actuator_motors_mux.control[control_i])){
+		// 		actuator_motors_mux.control[control_i] *= multiplier;
+		// 	}
+		// }
+		actuator_motors_mux_set	= true;
 	}
-	if(deactivated && actuator_motors_mux_set){
+	if(deactivated || !actuator_motors_mux_set){
 		for(int i = 0; i < actuator_motors_s::NUM_CONTROLS; i++){
 			actuator_motors_mux.control[i] = NAN;
 		}	
 	}
-	if(actuator_motors_mux_set){
+	else{
 		if constexpr(SCALE_OUTPUT_WITH_THROTTLE){
 			for(int i = 0; i < actuator_motors_s::NUM_CONTROLS; i++){
 				float multiplier = (manual_control_input.throttle + 1)/2;
