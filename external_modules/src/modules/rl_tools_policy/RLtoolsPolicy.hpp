@@ -116,6 +116,14 @@ private:
 	// messaging state
 	static constexpr TI POLICY_INTERVAL_WARNING_THRESHOLD = 100; // us
 	static constexpr TI POLICY_FREQUENCY_CHECK_INTERVAL = 1000 * 1000; // 1s
+	static constexpr TI POLICY_FREQUENCY_INFO_INTERVAL = 10; // 10 x POLICY_FREQUENCY_CHECK_INTERVAL = 10x
+
+	TI num_statii;
+	TI num_healthy_executor_statii_intermediate, num_non_healthy_executor_statii_intermediate, num_healthy_executor_statii_native, num_non_healthy_executor_statii_native;
+	RLtoolsInferenceExecutorStatus last_intermediate_status, last_native_status;
+	bool last_intermediate_status_set, last_native_status_set;
+
+	TI policy_frequency_check_counter;
 	hrt_abstime timestamp_last_policy_frequency_check;
 	bool timestamp_last_policy_frequency_check_set = false;
 

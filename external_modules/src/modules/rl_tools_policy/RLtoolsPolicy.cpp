@@ -1,4 +1,5 @@
 #include "RLtoolsPolicy.hpp"
+#undef OK
 
 RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::rate_ctrl){
 	// node state
@@ -10,6 +11,9 @@ RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_
 	previous_active = false;
 	timeout_message_sent = false;
 	timestamp_last_policy_frequency_check_set = false;
+	last_intermediate_status_set = false;
+	last_native_status_set = false;
+	policy_frequency_check_counter = 0;
 
 	_actuator_motors_rl_tools_pub.advertise();
 }
@@ -403,6 +407,55 @@ void RLtoolsPolicy::Run()
 	_actuator_motors_rl_tools_pub.publish(actuator_motors);
 	perf_end(_loop_perf);
 	previous_active = next_active;
+
+	if(executor_status.source == RL_TOOLS_INFERENCE_EXECUTOR_STATUS_SOURCE_CONTROL){
+		if(executor_status.step_type == RL_TOOLS_INFERENCE_EXECUTOR_STATUS_STEP_TYPE_INTERMEDIATE){
+			this->last_intermediate_status = executor_status;
+			this->last_intermediate_status_set = true;
+		}
+		else if(executor_status.step_type == RL_TOOLS_INFERENCE_EXECUTOR_STATUS_STEP_TYPE_NATIVE){
+			this->last_native_status = executor_status;
+			this->last_native_status_set = true;
+		}
+	}
+
+	if(!this->timestamp_last_policy_frequency_check_set || (current_time - timestamp_last_policy_frequency_check) > POLICY_FREQUENCY_CHECK_INTERVAL){
+		if(this->timestamp_last_policy_frequency_check_set){
+			if(last_intermediate_status_set){
+				if(!this->last_intermediate_status.timing_bias.OK || !this->last_intermediate_status.timing_jitter.OK){
+					PX4_WARN("RLtoolsPolicy: INTERMEDIATE: BIAS %fx JITTER %fx", this->last_intermediate_status.timing_bias.MAGNITUDE, this->last_intermediate_status.timing_jitter.MAGNITUDE);
+				}
+				else{
+					if(this->policy_frequency_check_counter % POLICY_FREQUENCY_INFO_INTERVAL == 0){
+						PX4_INFO("RLtoolsPolicy: INTERMEDIATE: BIAS %fx JITTER %fx", this->last_intermediate_status.timing_bias.MAGNITUDE, this->last_intermediate_status.timing_jitter.MAGNITUDE);
+					}
+				}
+			}
+			if(last_native_status_set){
+				if(!this->last_native_status.timing_bias.OK || !this->last_native_status.timing_jitter.OK){
+					PX4_WARN("RLtoolsPolicy: NATIVE: BIAS %fx JITTER %fx", this->last_native_status.timing_bias.MAGNITUDE, this->last_native_status.timing_jitter.MAGNITUDE);
+				}
+				else{
+					if(this->policy_frequency_check_counter % POLICY_FREQUENCY_INFO_INTERVAL == 0){
+						PX4_INFO("RLtoolsPolicy: NATIVE: BIAS %fx JITTER %fx", this->last_native_status.timing_bias.MAGNITUDE, this->last_native_status.timing_jitter.MAGNITUDE);
+					}
+				}
+			}
+		}
+		this->num_healthy_executor_statii_intermediate = 0;
+		this->num_non_healthy_executor_statii_intermediate = 0;
+		this->num_healthy_executor_statii_native = 0;
+		this->num_non_healthy_executor_statii_native = 0;
+		this->num_statii = 0;
+		this->timestamp_last_policy_frequency_check = current_time;
+		this->timestamp_last_policy_frequency_check_set = true;
+		this->policy_frequency_check_counter++;
+	}
+	this->num_statii++;
+	this->num_healthy_executor_statii_intermediate += executor_status.OK && executor_status.source == RL_TOOLS_INFERENCE_EXECUTOR_STATUS_SOURCE_CONTROL && executor_status.step_type == RL_TOOLS_INFERENCE_EXECUTOR_STATUS_STEP_TYPE_INTERMEDIATE;
+	this->num_non_healthy_executor_statii_intermediate += (!executor_status.OK) && executor_status.source == RL_TOOLS_INFERENCE_EXECUTOR_STATUS_SOURCE_CONTROL && executor_status.step_type == RL_TOOLS_INFERENCE_EXECUTOR_STATUS_STEP_TYPE_INTERMEDIATE;
+	this->num_healthy_executor_statii_native += executor_status.OK && executor_status.source == RL_TOOLS_INFERENCE_EXECUTOR_STATUS_SOURCE_CONTROL && executor_status.step_type == RL_TOOLS_INFERENCE_EXECUTOR_STATUS_STEP_TYPE_NATIVE;
+	this->num_non_healthy_executor_statii_native += (!executor_status.OK) && executor_status.source == RL_TOOLS_INFERENCE_EXECUTOR_STATUS_SOURCE_CONTROL && executor_status.step_type == RL_TOOLS_INFERENCE_EXECUTOR_STATUS_STEP_TYPE_NATIVE;
 }
 
 int RLtoolsPolicy::task_spawn(int argc, char *argv[])
