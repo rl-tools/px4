@@ -1,0 +1,15 @@
+module_name: ActuatorMotorsMultiplexer
+parameters:
+    - group: RLtools
+      definitions:
+        RLT_MUX_CLIP_MAX:
+          description:
+            short: Hard, blanket output limit
+            long: |
+              Hard, blanket output limit
+          type: float
+          decimal: 2
+          increment: 0.05
+          min: 0
+          max: 1
+          default: 1.0

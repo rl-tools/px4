@@ -6,6 +6,8 @@ px4_add_module(
 	STACK_MAIN 2000
 	SRCS
 		actuator_motors_multiplexer.cpp
+	MODULE_CONFIG
+		module.yaml
 	EXTERNAL
 	)
 

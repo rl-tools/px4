@@ -1,4 +1,5 @@
 #include "actuator_motors_multiplexer.hpp"
+#include <cmath>
 
 ActuatorMotorsMultiplexer::ActuatorMotorsMultiplexer() : ModuleParams(nullptr), ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::test1) {
 	last_rl_tools_output_time_set = false;
@@ -20,7 +21,7 @@ ActuatorMotorsMultiplexer::~ActuatorMotorsMultiplexer()
 
 bool ActuatorMotorsMultiplexer::init()
 {
-	PX4_WARN("ActuatorMotorsMultiplexer limit: %f", (double)ACTUATOR_MOTORS_MULTIPLEXER_LIMIT);
+	PX4_WARN("ActuatorMotorsMultiplexer limit: %f", (double)_rlt_mux_clip_max.get());
 	// ScheduleOnInterval(2000_us); // 2000 us interval, 200 Hz rate
 	this->init_time = hrt_absolute_time();
 
@@ -39,6 +40,17 @@ bool ActuatorMotorsMultiplexer::init()
 	}
 	return true;
 }
+void ActuatorMotorsMultiplexer::parameters_update(){
+	auto mux_clip_max_pre = _rlt_mux_clip_max.get();
+	if (_parameter_update_sub.updated()) {
+		parameter_update_s param_update;
+		_parameter_update_sub.copy(&param_update);
+		updateParams();
+	}
+	if (std::fabs(mux_clip_max_pre - _rlt_mux_clip_max.get()) > 1e-5f){
+		PX4_WARN("Parameter updated: RLT_MUX_CLIP_MAX = %f", (double)_rlt_mux_clip_max.get());
+	}
+}
 
 void ActuatorMotorsMultiplexer::Run()
 {
@@ -49,6 +61,7 @@ void ActuatorMotorsMultiplexer::Run()
 		exit_and_cleanup();
 		return;
 	}
+	this->parameters_update();
 
 	hrt_abstime current_time = hrt_absolute_time();
 
@@ -176,7 +189,7 @@ void ActuatorMotorsMultiplexer::Run()
 		}
 		for(int i = 0; i < actuator_motors_s::NUM_CONTROLS; i++){
 			if(!std::isnan(actuator_motors_mux.control[i])){
-				actuator_motors_mux.control[i] = fminf(ACTUATOR_MOTORS_MULTIPLEXER_LIMIT, actuator_motors_mux.control[i]);
+				actuator_motors_mux.control[i] = fminf(_rlt_mux_clip_max.get(), actuator_motors_mux.control[i]);
 			}
 		}	
 		rl_tools_multiplexer_status_s status;

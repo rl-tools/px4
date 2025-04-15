@@ -16,6 +16,7 @@
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/rl_tools_multiplexer_status.h>
 #include <uORB/topics/rl_tools_policy_status.h>
+#include <uORB/topics/parameter_update.h>
 
 using namespace time_literals;
 
@@ -45,7 +46,6 @@ private:
 		TURN_OFF_AFTER_TIMEOUT = 2
 	};
 	static constexpr bool TRIGGERED_BY_RC = false;
-	static constexpr float ACTUATOR_MOTORS_MULTIPLEXER_LIMIT = 1;
 	static constexpr Mode MODE = Mode::SWITCH_BACK;
 	// static constexpr Mode MODE = Mode::TURN_OFF;
 	static constexpr uint64_t SWITCH_BACK_TIMEOUT = 5 * 1000 * 1000;
@@ -71,5 +71,11 @@ private:
 	// Performance (perf) counters
 	perf_counter_t	_loop_perf{perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")};
 	perf_counter_t	_loop_interval_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": interval")};
+
+	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
+	void parameters_update();
+	DEFINE_PARAMETERS(
+		(ParamFloat<px4::params::RLT_MUX_CLIP_MAX>) _rlt_mux_clip_max
+	)
 
 };
