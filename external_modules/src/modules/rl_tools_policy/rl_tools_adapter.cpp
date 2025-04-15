@@ -33,8 +33,8 @@ struct RL_TOOLS_INFERENCE_APPLICATIONS_L2F_CONFIG{
     static constexpr TI CONTROL_INTERVAL_INTERMEDIATE_NS = 2.5 * 1000 * 1000; // Inference is at 500hz
     static constexpr TI CONTROL_INTERVAL_NATIVE_NS = 10 * 1000 * 1000; // Training is 100hz
     static constexpr TI TIMING_STATS_NUM_STEPS = 100;
-    static constexpr bool FORCE_SYNC_INTERMEDIATE = false;
-    static constexpr TI FORCE_SYNC_NATIVE = 0;
+    static constexpr bool FORCE_SYNC_INTERMEDIATE = true;
+    static constexpr TI FORCE_SYNC_NATIVE = 4;
     static constexpr bool DYNAMIC_ALLOCATION = false;
 };
 

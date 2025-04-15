@@ -22,8 +22,8 @@
             "justMyCode": false,
             "cwd": "${workspaceFolder}/tools/external_position_reference",
             "env":{
-                "MAVLINK_POSE_TOPIC": "/vicon/race2/pose",
-                "MAVLINK_URL": "tcp:localhost:5760"
+                "MAVLINK_POSE_TOPIC": "/vicon/race_jonas/pose",
+                "MAVLINK_URL": "udp:localhost:14551"
             }
         }
     ]

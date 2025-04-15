@@ -17,7 +17,7 @@ print("Heartbeat from system (system %u component %u)" % (connection.target_syst
 
 
 last_update = None
-interval = None #0.05
+interval = 0.10
 
 def vicon_callback(message):
     global last_update
@@ -39,6 +39,7 @@ def vicon_callback(message):
         last_update = now
 ros = roslibpy.Ros(host='localhost', port=9090)
 vicon_pose_topic = os.environ["MAVLINK_POSE_TOPIC"] if "MAVLINK_POSE_TOPIC" in os.environ else "/vicon/race6/pose"
+print(f"Subscribing to {vicon_pose_topic}")
 vicon_listener = roslibpy.Topic(ros, vicon_pose_topic, 'geometry_msgs/PoseStamped')
 vicon_counter = 0
 vicon_listener.subscribe(vicon_callback)

@@ -177,3 +177,27 @@ Note that the Pixracer pro does not properly support 1.15 due to the [compass no
 3. `make px4_fmu-v6c_default` to test if the compilation works
 4. `make px4_fmu-v6c_default EXTERNAL_MODULES_LOCATION=$(cd .. && cd external_modules && pwd) RL_TOOLS_ROOT=$(cd ../../../ && pwd) -j8`
 
+
+
+## More config
+Flow
+Run mocap docker container to connect to Vicon and forward the ROS topics using the WebSocket bridge
+
+Run Mavproxy to proxy between QGroundControl and the Vicon forwarding script:
+```
+mavproxy.py --master=/dev/ttyACM0 --out=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551 || mavproxy.py --master=/dev/ttyACM1 --out=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551 || mavproxy.py --master=/dev/ttyUSB0 --out=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551 || mavproxy.py --master=/dev/ttyUSB1 --out=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551
+```
+
+Run the Vicon forwarding script (check the `.vscode/launch.json`) to connect to the right Vicon topic and the localhost:14551 UDP MavLink endpoint.
+
+Turn off the Barometer height estimation when using a mocap system:
+```
+EKF2_HGT_REF = "Vision"
+```
+Because we send the position reference through the MAVLINK vision message
+```
+EKF2_BARO_CTRL = Disabled
+```
+```
+EKF2_MAG_TYPE = None
+```

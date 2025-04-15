@@ -45,7 +45,7 @@ void RLtoolsCommander::parameters_update(){
 		updateParams();
 	}
 	if (activ_src_pre != _rlt_activ_src.get() || activ_btn_pre != _rlt_activ_btn.get()){
-		PX4_INFO("Parameter updated: activ_src=%d, activ_btn=%d", _rlt_activ_src.get(), _rlt_activ_btn.get());
+		PX4_INFO("Parameter updated: activ_src=%d, activ_btn=%d", (int)_rlt_activ_src.get(), (int)_rlt_activ_btn.get());
 	}
 }
 
