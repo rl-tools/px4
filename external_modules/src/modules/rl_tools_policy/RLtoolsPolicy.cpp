@@ -247,6 +247,7 @@ void RLtoolsPolicy::Run()
 	status.subscription_update = 0x0;
 	status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_NONE;
 	status.substep = 0;
+	status.active = false;
 	status.control_interval = NAN;
 
 	bool angular_velocity_update = false;
@@ -329,7 +330,8 @@ void RLtoolsPolicy::Run()
 		}
 		return;
 	}
-	// no return after this point!
+	timeout_message_sent = false;
+
 	if(!timestamp_last_command_set || (current_time - timestamp_last_command) > COMMAND_TIMEOUT){
 		status.command_stale = true;
 		if(!previous_command_stale){
@@ -343,6 +345,21 @@ void RLtoolsPolicy::Run()
 	else{
 		status.command_stale = false;
 	}
+
+
+	RLtoolsInferenceApplicationsL2FObservation observation;
+	RLtoolsInferenceApplicationsL2FAction action;
+	observe(observation, TEST_OBSERVATION_MODE);
+	auto executor_status = rl_tools_inference_applications_l2f_control(current_time * 1000, &observation, &action);
+
+	if(executor_status.source != RL_TOOLS_INFERENCE_EXECUTOR_STATUS_SOURCE_CONTROL){
+		status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_EXECUTOR_STATUS_SOURCE_NOT_CONTROL;
+		if constexpr(PUBLISH_NON_COMPLETE_STATUS){
+			_rl_tools_policy_status_pub.publish(status);
+		}
+		return;
+	}
+
 	bool next_active = !status.command_stale && _rl_tools_command.active;
 	if(!previous_active && next_active){
 		this->reset();
@@ -350,12 +367,8 @@ void RLtoolsPolicy::Run()
 	}
 	status.active = next_active;
 
-	timeout_message_sent = false;
 
-	RLtoolsInferenceApplicationsL2FObservation observation;
-	RLtoolsInferenceApplicationsL2FAction action;
-	observe(observation, TEST_OBSERVATION_MODE);
-	auto executor_status = rl_tools_inference_applications_l2f_control(current_time * 1000, &observation, &action);
+	// no return after this point!
 
 	rl_tools_policy_input_s input_msg;
 	input_msg.active = status.active;
