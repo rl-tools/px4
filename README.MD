@@ -114,7 +114,7 @@ docker run -it --rm --name rl-tools-px4 --network host --hostname rl-tools-px4 -
 ```
 Connect GUI client:
 ```
-xhost +local:docker && docker run --rm --network host -it --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --volume /tmp/.X11-unix:/tmp/.X11-unix:rw rltools/px4 bash -c 'GZ_PARTITION=rl-tools-px4:root GZ_SIM_RESOURCE_PATH=/px4-autopilot/Tools/simulation/gz/models gz sim'
+xhost +local:docker && docker run --rm --network host -it --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --mount type=bind,source=$(pwd)/px4_autopilot/Tools/simulation/gz/models,target=/models,readonly rltools/px4 bash -c 'GZ_PARTITION=rl-tools-px4:root GZ_SIM_RESOURCE_PATH=/models gz sim'
 ```
 note: Gazebo has some auto-discovery and global partition namespace, which is set based on the `--hostname` of the server
 
