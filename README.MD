@@ -118,6 +118,8 @@ xhost +local:docker && docker run --rm --network host -it --env DISPLAY=$DISPLAY
 ```
 note: Gazebo has some auto-discovery and global partition namespace, which is set based on the `--hostname` of the server
 
+Run QGroundControl in UDP discovery mode
+
 ### Notes on the simulation frequency / IMU rate
 
 The low-level controllers are synchronized on the IMU rate (`IMU_INTEG_RATE`) but they are limited by the Gazebo simulation rate. Policies that take the history into account rely on the time between steps to match the one experienced during training (which is often 100 Hz). We can control at higher frequencies, but we need to make sure to advance e.g. the action history at a lower rate. The difference should be an integer multiple such that there is no aliasing. By default the Gazebo sim rate is 250Hz wich is not an integer multiple. To set the rate to e.g. 400 Hz we need to change it in the `physics` tag and the `imu_sensor` tag (works best if both exactly match):
