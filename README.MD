@@ -1,6 +1,6 @@
 # RLtools: PX4 Module
 
-> **⚠️ Note**: This was tested with RLtools aecd4d9e6087abb4aa48e7a489b53d4061577032
+> **⚠️ Note**: This was tested with RLtools 9607f5b948808b69588e4f53351eff9c0407d114
 >
 
 This example aims at the `Pixracer Pro` which is a `Pixhawk 6C` compliant hardware implementation (have a look at `./px4_autopilot` for the changes to the mro/pixracerpro board definition and compilation config).
@@ -73,6 +73,10 @@ Note: It is necessary to disable the integral parts in the integrated controller
 ```
 MC_***_I=0
 ```
+To prevent the phase shift/delay in the gyro data:
+```
+IMU_GYRO_CUTOFF>=100Hz
+```
 To log high-frequency data required for sysid:
 ```
 SDLOG_PROFILE=8
@@ -119,6 +123,13 @@ xhost +local:docker && docker run --rm --network host -it --env DISPLAY=$DISPLAY
 note: Gazebo has some auto-discovery and global partition namespace, which is set based on the `--hostname` of the server
 
 Run QGroundControl in UDP discovery mode
+
+
+### Using a Joystick
+The Joystick is forwarded from QGroundControl through Mavlink to the SITL. 
+1. Do the Joystick setup in QGroundControl and map one button to arm the drone.
+2. Another button should be used for switching to the RLtools policy, remember the ID (from the Joystick setup view) of the desired button
+3. In the parameters set `RLT_ACTIV_SRC` to Mavlink and `RLT_ACTIV_BTN` to the button id identified before
 
 ### Notes on the simulation frequency / IMU rate
 

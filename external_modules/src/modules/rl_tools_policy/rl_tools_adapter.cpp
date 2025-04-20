@@ -24,7 +24,7 @@ struct RL_TOOLS_INFERENCE_APPLICATIONS_L2F_CONFIG{
     static constexpr TI TEST_BATCH_SIZE_ACTUAL = 2;
     using ACTOR_TYPE_ORIGINAL = rlt::checkpoint::actor::TYPE;
     using POLICY_TEST = rlt::checkpoint::actor::TYPE::template CHANGE_BATCH_SIZE<TI, 1>::template CHANGE_SEQUENCE_LENGTH<TI, 1>;
-    using POLICY = ACTOR_TYPE_ORIGINAL::template CHANGE_BATCH_SIZE<TI, 1>::template CHANGE_SEQUENCE_LENGTH<TI, 1>;
+    using POLICY = ACTOR_TYPE_ORIGINAL::template CHANGE_BATCH_SIZE<TI, 1>;
     using T = typename POLICY::SPEC::T;
     static auto& policy() {
         return rlt::checkpoint::actor::module;
