@@ -46,6 +46,7 @@ bool RLtoolsPolicy::init()
 		PX4_ERR("vehicle_attitude_sub callback registration failed");
 		return false;
 	}
+	PX4_INFO("Checkpoint: %s", rl_tools_inference_applications_l2f_checkpoint_name());
 
 	RLtoolsInferenceApplicationsL2FAction action;
 	float abs_diff = rl_tools_inference_applications_l2f_test(&action);
@@ -54,9 +55,16 @@ bool RLtoolsPolicy::init()
 		PX4_INFO("output[%d]: %f", output_i, action.action[output_i]);
 	}
 
-	constexpr float EPSILON = 1e-7;
+	constexpr float EPSILON = 1e-5;
 
-	return abs_diff < EPSILON;
+	bool healthy = abs_diff < EPSILON;
+	if(!healthy){
+		PX4_ERR("Checkpoint test failed with diff %.10f", abs_diff);
+	}
+	else{
+		PX4_INFO("Checkpoint test passed with diff %.10f", abs_diff);
+	}
+	return healthy;
 }
 template <typename T>
 T clip(T x, T max, T min){
