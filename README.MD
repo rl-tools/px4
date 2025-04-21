@@ -214,3 +214,6 @@ EKF2_BARO_CTRL = Disabled
 ```
 EKF2_MAG_TYPE = None
 ```
+```
+SDLOG_PROFILE = {enable SYSID and HIGH-SPEED}
+```

@@ -14,7 +14,7 @@
             "cwd": "${workspaceFolder}"
         },
         {
-            "name": "tools/external_position_reference/forward_ros_to_mavlink",
+            "name": "tools/external_position_reference/forward_ros_to_mavlink [race]",
             "type": "python",
             "request": "launch",
             "program": "forward_ros_to_mavlink.py",
@@ -23,6 +23,19 @@
             "cwd": "${workspaceFolder}/tools/external_position_reference",
             "env":{
                 "MAVLINK_POSE_TOPIC": "/vicon/race_jonas/pose",
+                "MAVLINK_URL": "udp:localhost:14551"
+            }
+        },
+        {
+            "name": "tools/external_position_reference/forward_ros_to_mavlink [x500]",
+            "type": "python",
+            "request": "launch",
+            "program": "forward_ros_to_mavlink.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}/tools/external_position_reference",
+            "env":{
+                "MAVLINK_POSE_TOPIC": "/vicon/x500_jonas/pose",
                 "MAVLINK_URL": "udp:localhost:14551"
             }
         }
