@@ -7,6 +7,8 @@
 #include <rl_tools/nn_models/mlp/operations_generic.h>
 #include <rl_tools/nn_models/sequential/operations_generic.h>
 
+#include <rl_tools/inference/executor/executor.h>
+
 #include "blob/policy.h"
 
 namespace rlt = rl_tools;
@@ -36,6 +38,7 @@ struct RL_TOOLS_INFERENCE_APPLICATIONS_L2F_CONFIG{
     static constexpr bool FORCE_SYNC_INTERMEDIATE = true;
     static constexpr TI FORCE_SYNC_NATIVE = 4;
     static constexpr bool DYNAMIC_ALLOCATION = false;
+    using WARNING_LEVELS = rlt::inference::executor::WarningLevelsDefault<T>;
 };
 
 // #define RL_TOOLS_DISABLE_TEST

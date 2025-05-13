@@ -38,6 +38,19 @@
                 "MAVLINK_POSE_TOPIC": "/vicon/x500_jonas/pose",
                 "MAVLINK_URL": "udp:localhost:14551"
             }
+        },
+        {
+            "name": "tools/external_position_reference/forward_ros_to_mavlink [soft]",
+            "type": "python",
+            "request": "launch",
+            "program": "forward_ros_to_mavlink.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}/tools/external_position_reference",
+            "env":{
+                "MAVLINK_POSE_TOPIC": "/vicon/SOFT2/pose",
+                "MAVLINK_URL": "udp:localhost:14551"
+            }
         }
     ]
 }
