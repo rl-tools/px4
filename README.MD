@@ -217,3 +217,6 @@ EKF2_MAG_TYPE = None
 ```
 SDLOG_PROFILE = {enable SYSID and HIGH-SPEED}
 ```
+```
+IMU_GYRO_RATEMAX=400
+```

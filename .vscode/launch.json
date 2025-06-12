@@ -48,7 +48,7 @@
             "justMyCode": false,
             "cwd": "${workspaceFolder}/tools/external_position_reference",
             "env":{
-                "MAVLINK_POSE_TOPIC": "/vicon/SOFT2/pose",
+                "MAVLINK_POSE_TOPIC": "/vicon/soft/pose",
                 "MAVLINK_URL": "udp:localhost:14551"
             }
         }
