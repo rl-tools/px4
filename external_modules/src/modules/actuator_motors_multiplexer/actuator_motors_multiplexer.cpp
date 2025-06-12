@@ -128,7 +128,7 @@ void ActuatorMotorsMultiplexer::Run()
 			}
 		}
 		else{
-			PX4_INFO("Switching to RLtools controller");
+			PX4_INFO("Switching to RLtools controller. Trigger value %f", (double)manual_control_input.aux1);
 			last_activation_time = current_time;
 			last_activation_time_set = true;
 			deactivated = false;
