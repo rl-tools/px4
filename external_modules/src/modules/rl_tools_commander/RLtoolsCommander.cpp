@@ -108,12 +108,12 @@ void RLtoolsCommander::Run()
 		trajectory_setpoint_s temp_trajectory_setpoint;
 		if(_trajectory_setpoint_sub.update(&temp_trajectory_setpoint)) {
 			if(
-				PX4_ISFINITE(trajectory_setpoint.position[0]) &&
-				PX4_ISFINITE(trajectory_setpoint.position[1]) &&
-				PX4_ISFINITE(trajectory_setpoint.position[2]) &&
-				PX4_ISFINITE(trajectory_setpoint.velocity[0]) &&
-				PX4_ISFINITE(trajectory_setpoint.velocity[1]) &&
-				PX4_ISFINITE(trajectory_setpoint.velocity[2])
+				PX4_ISFINITE(temp_trajectory_setpoint.position[0]) &&
+				PX4_ISFINITE(temp_trajectory_setpoint.position[1]) &&
+				PX4_ISFINITE(temp_trajectory_setpoint.position[2]) &&
+				PX4_ISFINITE(temp_trajectory_setpoint.velocity[0]) &&
+				PX4_ISFINITE(temp_trajectory_setpoint.velocity[1]) &&
+				PX4_ISFINITE(temp_trajectory_setpoint.velocity[2])
 			){
 				last_trajectory_setpoint_update_time_set = true;
 				last_trajectory_setpoint_update_time = trajectory_setpoint.timestamp;
@@ -228,7 +228,10 @@ void RLtoolsCommander::Run()
 			break;
 		case Mode::OFFBOARD:
 			if(!last_trajectory_setpoint_update_time_set || (last_trajectory_setpoint_update_time_set && ((current_time - last_trajectory_setpoint_update_time) > OFFBOARD_TIMEOUT))){
-				PX4_ERR("No trajectory setpoint received, disabling command");
+				if(!offboard_trajectory_setpoint_missing_error_message_sent){
+					PX4_ERR("No trajectory setpoint received, disabling command, you might need to switch to OFFBOARD");
+					offboard_trajectory_setpoint_missing_error_message_sent = true;
+				}
 				command.active = false;
 				command.target_position[0] = vehicle_local_position.x;
 				command.target_position[1] = vehicle_local_position.y;
@@ -237,6 +240,9 @@ void RLtoolsCommander::Run()
 				command.target_linear_velocity[1] = 0;
 				command.target_linear_velocity[2] = 0;
 				break;
+			}
+			else{
+				offboard_trajectory_setpoint_missing_error_message_sent = false;
 			}
 			command.target_position[0] = trajectory_setpoint.position[0];
 			command.target_position[1] = trajectory_setpoint.position[1];
@@ -332,7 +338,7 @@ void print_custom_command_usage(){
 	PX4_INFO_RAW("- set_target_height xx.xx ([m])\n");
 	PX4_INFO_RAW("- set_target_position xx.xx yy.yy zz.zz ([m], FRD!)\n");
 	PX4_INFO_RAW("- set_target_yaw zz.zz ([rad], FRD!)\n");
-	PX4_INFO_RAW("- set_mode {POSITION,TRAJECTORY_TRACKING,STEP_RESPONSE}\n");
+	PX4_INFO_RAW("- set_mode {POSITION,TRAJECTORY_TRACKING,STEP_RESPONSE,OFFBOARD}\n");
 	PX4_INFO_RAW("- set_trajectory_scale ([m], default figure-eight is 2mx1m\n");
 	PX4_INFO_RAW("- set_trajectory_interval ([s], default interval is 5.5s\n");
 	PX4_INFO_RAW("- set_step_response_offset xx.xx yy.yy zz.zz ([m], FRD!\n");
@@ -454,7 +460,8 @@ int RLtoolsCommander::custom_command(int argc, char *argv[])
 				const char* mode_names[] = {
 					"POSITION",
 					"TRAJECTORY_TRACKING",
-					"STEP_RESPONSE"
+					"STEP_RESPONSE",
+					"OFFBOARD"
 				};
 				if(strcmp(argv[1], "POSITION") == 0){
 					PX4_INFO_RAW("Setting mode from %s to %s\n", mode_names[(uint8_t)get_instance()->mode], argv[1]);
@@ -481,7 +488,15 @@ int RLtoolsCommander::custom_command(int argc, char *argv[])
 							retval = 0;
 						}
 						else{
-							PX4_INFO_RAW("Unknown mode %s\n", argv[1]);
+							if(strcmp(argv[1], "OFFBOARD") == 0){
+								PX4_INFO_RAW("Setting mode from %s to %s\n", mode_names[(uint8_t)get_instance()->mode], argv[1]);
+								get_instance()->mode = Mode::OFFBOARD;
+								print_usage = false;
+								retval = 0;
+							}
+							else{
+								PX4_INFO_RAW("Unknown mode %s\n", argv[1]);
+							}
 						}
 					}
 				}

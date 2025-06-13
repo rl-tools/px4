@@ -51,7 +51,7 @@ async def main():
             # connection.target_component,
             mavutil.mavlink.MAV_FRAME_LOCAL_NED,
             0b1111111111000000,
-            0.1337, 0, 0,  # x, y, z
+            0.0, 0, -5,  # x, y, z
             0, 0, 0,  # vx, vy, vz
             0, 0, 0,  # afx, afy, afz
             0, 0,  # yaw, yaw_rate
@@ -66,10 +66,11 @@ if __name__ == "__main__":
     print("Heartbeat from system (system %u component %u)" % (connection.target_system, connection.target_component))
 
     ros = roslibpy.Ros(host='localhost', port=9090)
-    vicon_pose_topic = os.environ["MAVLINK_POSE_TOPIC"] if "MAVLINK_POSE_TOPIC" in os.environ else "/vicon/race6/pose"
-    print(f"Subscribing to {vicon_pose_topic}")
-    vicon_listener = roslibpy.Topic(ros, vicon_pose_topic, 'geometry_msgs/PoseStamped')
-    vicon_listener.subscribe(vicon_callback)
+    vicon_pose_topic = os.environ["MAVLINK_POSE_TOPIC"] if "MAVLINK_POSE_TOPIC" in os.environ else None
+    if vicon_pose_topic is not None:
+        print(f"Subscribing to {vicon_pose_topic}")
+        vicon_listener = roslibpy.Topic(ros, vicon_pose_topic, 'geometry_msgs/PoseStamped')
+        vicon_listener.subscribe(vicon_callback)
     loop.create_task(main())
     reactor.run()
 

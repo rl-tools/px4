@@ -220,3 +220,10 @@ SDLOG_PROFILE = {enable SYSID and HIGH-SPEED}
 ```
 IMU_GYRO_RATEMAX=400
 ```
+
+
+### Offboard SITL
+
+```
+mavproxy.py   --master=udp:127.0.0.1:14540   --out=udp:127.0.0.1:14550   --out=udp:127.0.0.1:14551
+```

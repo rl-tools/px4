@@ -116,4 +116,5 @@ private:
 	float step_response_offset[3] = {1, 0, 0};
 
 	perf_counter_t	_loop_interval_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": interval")};
+	bool offboard_trajectory_setpoint_missing_error_message_sent = false;
 };
