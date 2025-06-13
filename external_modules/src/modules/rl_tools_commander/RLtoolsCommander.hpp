@@ -19,6 +19,7 @@
 #include <uORB/topics/tune_control.h>
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/parameter_update.h>
+#include <uORB/topics/trajectory_setpoint.h>
 
 using namespace time_literals;
 
@@ -93,10 +94,11 @@ private:
 	static constexpr bool SCALE_OUTPUT_WITH_THROTTLE = true;
 	static constexpr float DEFAULT_TARGET_HEIGHT = 0.0;
 
-	hrt_abstime last_rc_update_time, last_position_update_time, last_attitude_update_time;
+	hrt_abstime last_rc_update_time, last_position_update_time, last_attitude_update_time, last_trajectory_setpoint_update_time;
 	vehicle_local_position_s vehicle_local_position;
 	vehicle_attitude_s vehicle_attitude;
-	bool last_rc_update_time_set = false, last_position_update_time_set = false, last_attitude_update_time_set = false;
+	trajectory_setpoint_s trajectory_setpoint;
+	bool last_rc_update_time_set = false, last_position_update_time_set = false, last_attitude_update_time_set = false, last_trajectory_setpoint_update_time_set = false;
 	float activation_position[3] = {0, 0, 0};
 	float target_position[3] = {0, 0, 0};
 	float activation_orientation[4] = {1, 0, 0, 0};
