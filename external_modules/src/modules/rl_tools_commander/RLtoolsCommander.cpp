@@ -135,10 +135,10 @@ void RLtoolsCommander::Run()
 	}
 
 
-	constexpr hrt_abstime POSITION_TIMEOUT = 100*1000; // 100ms timeout
-	constexpr hrt_abstime ATTITUDE_TIMEOUT = 100*1000; // 100ms timeout
-	constexpr hrt_abstime RC_TRIGGER_TIMEOUT = 200*1000; // 200ms timeout
-	constexpr hrt_abstime OFFBOARD_TIMEOUT = 200*1000; // 200ms timeout
+	constexpr hrt_abstime POSITION_TIMEOUT = 1000*1000; // 100ms timeout
+	constexpr hrt_abstime ATTITUDE_TIMEOUT = 1000*1000; // 100ms timeout
+	constexpr hrt_abstime RC_TRIGGER_TIMEOUT = 2000*1000; // 200ms timeout
+	constexpr hrt_abstime OFFBOARD_TIMEOUT = 1000*1000; // 200ms timeout
 	// next_command_active = next_command_active && last_rc_update_time_set && last_position_update_time_set;
 	if(!last_rc_update_time_set || (last_rc_update_time_set && ((current_time - last_rc_update_time) > RC_TRIGGER_TIMEOUT))){
 		next_command_active = false;
@@ -239,17 +239,16 @@ void RLtoolsCommander::Run()
 				command.target_linear_velocity[0] = 0;
 				command.target_linear_velocity[1] = 0;
 				command.target_linear_velocity[2] = 0;
-				break;
 			}
 			else{
 				offboard_trajectory_setpoint_missing_error_message_sent = false;
+				command.target_position[0] = trajectory_setpoint.position[0];
+				command.target_position[1] = trajectory_setpoint.position[1];
+				command.target_position[2] = trajectory_setpoint.position[2];
+				command.target_linear_velocity[0] = trajectory_setpoint.velocity[0];
+				command.target_linear_velocity[1] = trajectory_setpoint.velocity[1];
+				command.target_linear_velocity[2] = trajectory_setpoint.velocity[2];
 			}
-			command.target_position[0] = trajectory_setpoint.position[0];
-			command.target_position[1] = trajectory_setpoint.position[1];
-			command.target_position[2] = trajectory_setpoint.position[2];
-			command.target_linear_velocity[0] = trajectory_setpoint.velocity[0];
-			command.target_linear_velocity[1] = trajectory_setpoint.velocity[1];
-			command.target_linear_velocity[2] = trajectory_setpoint.velocity[2];
 			break;
 		default:
 			break;

@@ -43,6 +43,11 @@ def vicon_callback(message):
 
 async def main():
     while True:
+        position = [
+            2.17933,
+            0.78621,
+            -0.13575 - 0.1
+        ]
         connection.mav.set_position_target_local_ned_send(
             0,
             1, 
@@ -51,7 +56,7 @@ async def main():
             # connection.target_component,
             mavutil.mavlink.MAV_FRAME_LOCAL_NED,
             0b1111111111000000,
-            0.0, 0, -5,  # x, y, z
+            *position,  # x, y, z
             0, 0, 0,  # vx, vy, vz
             0, 0, 0,  # afx, afy, afz
             0, 0,  # yaw, yaw_rate
