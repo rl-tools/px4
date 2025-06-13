@@ -13,3 +13,4 @@ Use SBUS output (`RC_INPUT_PROTO`). CRSF leads to jitter on the aux channel whic
 3. Set client mode, ssid and password of the router used for experiments
 4. Set TX = Pin 0, RX = Pin 1 (and solder the connector accordingly)
 5. In the experiment router, give a static IP to the MAC of the Wifi adapter
+6. Forwarding: `mavproxy.py --master=tcp:192.168.8.4:5760 --out=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551` where `192.168.8.4` is the static IP set in the router. `14550` should be automagically detected by QGroundControl and `14551` can, e.g., be used by the `./tools/external_position_reference/forward_ros_to_mavlink.py` script to forward a mocap reference to the vehicle
