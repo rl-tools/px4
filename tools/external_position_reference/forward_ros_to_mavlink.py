@@ -43,8 +43,20 @@ def vicon_callback(message):
 
 async def main():
     while True:
-        print("hi")
-        await asyncio.sleep(1)
+        connection.mav.set_position_target_local_ned_send(
+            0,
+            1, 
+            1,
+            # connection.target_system,
+            # connection.target_component,
+            mavutil.mavlink.MAV_FRAME_LOCAL_NED,
+            0b1111111111000000,
+            0.1337, 0, 0,  # x, y, z
+            0, 0, 0,  # vx, vy, vz
+            0, 0, 0,  # afx, afy, afz
+            0, 0,  # yaw, yaw_rate
+        )
+        await asyncio.sleep(0.02)
 
 if __name__ == "__main__":
     mavlink_url = os.environ["MAVLINK_URL"] if "MAVLINK_URL" in os.environ else "tcp:localhost:5760"
