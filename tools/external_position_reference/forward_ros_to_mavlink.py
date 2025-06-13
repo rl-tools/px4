@@ -56,7 +56,7 @@ async def main():
             0, 0, 0,  # afx, afy, afz
             0, 0,  # yaw, yaw_rate
         )
-        await asyncio.sleep(0.02)
+        await asyncio.sleep(0.1)
 
 if __name__ == "__main__":
     mavlink_url = os.environ["MAVLINK_URL"] if "MAVLINK_URL" in os.environ else "tcp:localhost:5760"
