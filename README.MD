@@ -64,7 +64,7 @@ For other boards you can substitute `mro_pixracerpro_default` with the appropria
 
 ## Preflight Checklist
 ### Compile-Time
-1. Check the propeller assignment (Remap from Crazyflie?) depending on the assignment that was used train the policy
+1. Check the propeller assignment (`REMAP_FROM_CRAZYFLIE`?) depending on the assignment that was used train the policy
 ### Configuration
 
 Note: It is recommended to disable the landing detection (which might trigger in-flight when using the trained policy):
