@@ -62,7 +62,10 @@ For other boards you can substitute `mro_pixracerpro_default` with the appropria
 - Start module: `rl_tools_benchmark start`
 - Watch printed output: `dmesg`
 
-## Configuration
+## Preflight Checklist
+### Compile-Time
+1. Check the propeller assignment (Remap from Crazyflie?) depending on the assignment that was used train the policy
+### Configuration
 
 Note: It is recommended to disable the landing detection (which might trigger in-flight when using the trained policy):
 ```
@@ -79,13 +82,41 @@ IMU_GYRO_CUTOFF>=100Hz
 ```
 To log high-frequency data required for sysid:
 ```
-SDLOG_PROFILE=8
+SDLOG_PROFILE={enable SYSID and HIGH-SPEED}
 ```
 When switching to and from the policy all integral components of the default control stack should be disabled (otherwise they might saturate while the policy is in action and e.g. send maximum throttle when switching back)
 
 Make sure that the PX4 `IMU_GYRO_RATEMAX` setting is matching the rate that is [expected by the policy](https://github.com/rl-tools/px4/blob/fe4c79b987b3d6928b26240096edbbe2cd608e69/external_modules/src/modules/rl_tools_policy/RLtoolsPolicy.hpp#L118) (`400 Hz` by default)
+```
+IMU_GYRO_RATEMAX=400
+```
+
+Turn off the Barometer height estimation when using a mocap system:
+```
+EKF2_HGT_REF = "Vision"
+```
+Because we send the position reference through the MAVLINK vision message
+```
+EKF2_BARO_CTRL = Disabled
+```
+```
+EKF2_MAG_TYPE = None
+```
 
 Note to activate the policy using a dead man's switch the aux passthrough should be activated in QGC.
+
+### Position Feedback
+Run mocap docker container to connect to Vicon and forward the ROS topics using the WebSocket bridge
+
+Run Mavproxy to proxy between QGroundControl and the Vicon forwarding script:
+```
+mavproxy.py --master=/dev/ttyACM0 --out=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551 || mavproxy.py --master=/dev/ttyACM1 --out=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551 || mavproxy.py --master=/dev/ttyUSB0 --out=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551 || mavproxy.py --master=/dev/ttyUSB1 --out=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551
+```
+
+Run the Vicon forwarding script (check the `.vscode/launch.json`) to connect to the right Vicon topic and the localhost:14551 UDP MavLink endpoint.
+
+Check if the reported position estimate inside PX4 (Mavlink Shell: `listener vehicle_local_position`) matches the expected location
+
 
 
 ## Hardware in the Loop (HITL)
@@ -192,34 +223,6 @@ Note that the Pixracer pro does not properly support 1.15 due to the [compass no
 
 
 
-## More config
-Flow
-Run mocap docker container to connect to Vicon and forward the ROS topics using the WebSocket bridge
-
-Run Mavproxy to proxy between QGroundControl and the Vicon forwarding script:
-```
-mavproxy.py --master=/dev/ttyACM0 --out=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551 || mavproxy.py --master=/dev/ttyACM1 --out=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551 || mavproxy.py --master=/dev/ttyUSB0 --out=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551 || mavproxy.py --master=/dev/ttyUSB1 --out=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551
-```
-
-Run the Vicon forwarding script (check the `.vscode/launch.json`) to connect to the right Vicon topic and the localhost:14551 UDP MavLink endpoint.
-
-Turn off the Barometer height estimation when using a mocap system:
-```
-EKF2_HGT_REF = "Vision"
-```
-Because we send the position reference through the MAVLINK vision message
-```
-EKF2_BARO_CTRL = Disabled
-```
-```
-EKF2_MAG_TYPE = None
-```
-```
-SDLOG_PROFILE = {enable SYSID and HIGH-SPEED}
-```
-```
-IMU_GYRO_RATEMAX=400
-```
 
 
 ### Offboard SITL
