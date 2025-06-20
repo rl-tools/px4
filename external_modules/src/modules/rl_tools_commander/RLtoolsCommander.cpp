@@ -106,7 +106,7 @@ void RLtoolsCommander::Run()
 	}
 	{
 		trajectory_setpoint_s temp_trajectory_setpoint;
-		if(_trajectory_setpoint_sub.update(&temp_trajectory_setpoint)) {
+		if(_trajectory_setpoint_rlt_sub.update(&temp_trajectory_setpoint)) {
 			if(
 				PX4_ISFINITE(temp_trajectory_setpoint.position[0]) &&
 				PX4_ISFINITE(temp_trajectory_setpoint.position[1]) &&

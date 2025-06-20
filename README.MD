@@ -103,6 +103,11 @@ EKF2_BARO_CTRL = Disabled
 EKF2_MAG_TYPE = None
 ```
 
+If using `rl_tools_commander set_mode OFFBOARD`:
+```
+MAV_FWDEXTSP=Enabled
+```
+
 Note to activate the policy using a dead man's switch the aux passthrough should be activated in QGC.
 
 ### Position Feedback

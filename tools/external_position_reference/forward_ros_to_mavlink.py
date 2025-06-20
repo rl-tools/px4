@@ -44,9 +44,9 @@ def vicon_callback(message):
 async def main():
     while True:
         position = [
-            2.17933,
-            0.78621,
-            -0.13575 - 0.1
+            0,
+            0,
+            -0.07 - 0.50
         ]
         connection.mav.set_position_target_local_ned_send(
             0,

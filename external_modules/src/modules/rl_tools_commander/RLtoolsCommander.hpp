@@ -90,7 +90,7 @@ private:
 	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_sub{this, ORB_ID(vehicle_attitude)};
 	uORB::Publication<rl_tools_command_s> _rl_tools_command_pub{ORB_ID(rl_tools_command)};
 	uORB::Publication<tune_control_s> _tune_control_pub{ORB_ID(tune_control)};
-	uORB::Subscription _trajectory_setpoint_sub{ORB_ID(trajectory_setpoint)};
+	uORB::Subscription _trajectory_setpoint_rlt_sub{ORB_ID(trajectory_setpoint_rlt)};
 
 	static constexpr bool MAKE_SOME_NOISE = true;
 	static constexpr bool SCALE_OUTPUT_WITH_THROTTLE = true;
