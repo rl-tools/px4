@@ -23,7 +23,7 @@ last_update = None
 interval = 0.10
 
 POSITION_STD = 0.01 # m
-VELOCITY_STD = 0.10 # m/s
+VELOCITY_STD = 0.01 # m/s
 ORIENTATION_STD = 5.0 # degrees
 def vicon_callback(msg):
     global last_update
@@ -38,8 +38,8 @@ def vicon_callback(msg):
 
     vx, vy, vz = [msg["twist"]["twist"]["linear"][x] for x in ["x", "y", "z"]]
     vx, vy, vz =  vx, -vy, -vz
-    Rwb = R.from_quat([q_mav[-1], q_mav[0], q_mav[1], q_mav[2]])
-    vx_body, vy_body, vz_body = Rwb.apply([vx, vy, vz], inverse=True)
+    # Rwb = R.from_quat([q_mav[-1], q_mav[0], q_mav[1], q_mav[2]])
+    # vx_body, vy_body, vz_body = Rwb.apply([vx, vy, vz], inverse=True)
 
     pose_cov = np.full(21, np.nan,  dtype=np.float32)
     vel_cov  = np.full(21, np.nan,  dtype=np.float32)
@@ -51,10 +51,11 @@ def vicon_callback(msg):
         connection.mav.odometry_send(
             usec,
             mavutil.mavlink.MAV_FRAME_LOCAL_NED,    # pose frame
-            mavutil.mavlink.MAV_FRAME_BODY_FRD,     # twist frame
+            mavutil.mavlink.MAV_FRAME_LOCAL_NED,     # twist frame
             x, y, z,
             q_mav,
-            vx_body, vy_body, vz_body,
+            # vx_body, vy_body, vz_body,
+            vx, vy, vz,
             float('nan'), float('nan'), float('nan'),   # angular rates
             pose_cov,
             vel_cov,

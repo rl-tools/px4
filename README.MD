@@ -102,7 +102,7 @@ Please also check the `EKF2_EV_NOISE_MD` noise mode (default: take from Mavlink 
 EKF2_EVP_NOISE=0.01
 EKF2_EVV_NOISE=0.10 (default)
 ```
-Also enable "Track" in Vicon (less interference by IR reflective surfaces I believe)
+Also enable "Track" in Vicon (less interference by IR reflective surfaces I believe) and set the Vicon frequency to 30 to prevent spikes
 
 
 ```
