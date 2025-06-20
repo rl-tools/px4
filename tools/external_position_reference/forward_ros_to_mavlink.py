@@ -71,7 +71,7 @@ async def main():
         position = [
             0,
             0,
-            -0.07 - 0.30
+            -0.07 - 0.20
         ]
         connection.mav.set_position_target_local_ned_send(
             0,
