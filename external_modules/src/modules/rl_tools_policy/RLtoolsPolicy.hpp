@@ -68,7 +68,7 @@ private:
 		return a < b ? a : b;
 	}
 
-	T max_position_error = 0.2; // min(rl_tools::checkpoint::meta::environment::parameters::mdp::init::max_position, rl_tools::checkpoint::meta::environment::parameters::mdp::termination::position_threshold);
+	T max_position_error = 0.5; // min(rl_tools::checkpoint::meta::environment::parameters::mdp::init::max_position, rl_tools::checkpoint::meta::environment::parameters::mdp::termination::position_threshold);
 	T max_velocity_error = 1.0; // min(rl_tools::checkpoint::meta::environment::parameters::mdp::init::max_linear_velocity, rl_tools::checkpoint::meta::environment::parameters::mdp::termination::linear_velocity_threshold);
 
 	void Run() override;

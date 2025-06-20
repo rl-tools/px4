@@ -22,23 +22,47 @@ import time
 last_update = None
 interval = 0.10
 
-def vicon_callback(message):
+POSITION_STD = 0.01 # m
+VELOCITY_STD = 0.10 # m/s
+ORIENTATION_STD = 5.0 # degrees
+def vicon_callback(msg):
     global last_update
-    x = message["pose"]["position"]["x"]
-    y = -message["pose"]["position"]["y"]
-    z = -message["pose"]["position"]["z"]
-    qw = message["pose"]["orientation"]["w"]
-    qx = message["pose"]["orientation"]["x"]
-    qy = -message["pose"]["orientation"]["y"]
-    qz = -message["pose"]["orientation"]["z"]
-    quaternion = np.array([qx, qy, qz, qw])
-    rotation = R.from_quat(quaternion)
-    roll, pitch, yaw = rotation.as_euler('xyz', degrees=False)
-    usec = int(message["header"]["stamp"]["secs"] * 1e6 + message["header"]["stamp"]["nsecs"] / 1e3)
+    secs  = msg["header"]["stamp"]["secs"]
+    nsecs = msg["header"]["stamp"]["nsecs"]
+    usec  = int(secs * 1e6 + nsecs / 1e3)
+
+    x,  y,  z  =  [msg["pose"]["pose"]["position"][x] for x in ["x", "y", "z"]]
+    x,  y,  z  =  x, -y, -z
+    qw, qx, qy, qz = [msg["pose"]["pose"]["orientation"][x] for x in ["w", "x", "y", "z"]]
+    q_mav = [qw,  qx, -qy, -qz]
+
+    vx, vy, vz = [msg["twist"]["twist"]["linear"][x] for x in ["x", "y", "z"]]
+    vx, vy, vz =  vx, -vy, -vz
+    Rwb = R.from_quat([q_mav[-1], q_mav[0], q_mav[1], q_mav[2]])
+    vx_body, vy_body, vz_body = Rwb.apply([vx, vy, vz], inverse=True)
+
+    pose_cov = np.full(21, np.nan,  dtype=np.float32)
+    vel_cov  = np.full(21, np.nan,  dtype=np.float32)
+    pose_cov[0] = pose_cov[6] = pose_cov[11] = POSITION_STD**2
+    pose_cov[15] = pose_cov[18] = pose_cov[20] = (np.deg2rad(ORIENTATION_STD))**2
+    vel_cov[0]  = vel_cov[6]  = vel_cov[11]  = VELOCITY_STD**2
     now = time.time()
     if last_update is None or interval is None or now - last_update > interval:
-        connection.mav.vision_position_estimate_send(usec, x, y, z, roll, pitch, yaw)
-        print(f"Forwarding position (FRD) to MAVLink: {x}, {y}, {z}, {roll}, {pitch}, {yaw}")
+        connection.mav.odometry_send(
+            usec,
+            mavutil.mavlink.MAV_FRAME_LOCAL_NED,    # pose frame
+            mavutil.mavlink.MAV_FRAME_BODY_FRD,     # twist frame
+            x, y, z,
+            q_mav,
+            vx_body, vy_body, vz_body,
+            float('nan'), float('nan'), float('nan'),   # angular rates
+            pose_cov,
+            vel_cov,
+            0,                                         # reset_counter
+            mavutil.mavlink.MAV_ESTIMATOR_TYPE_VISION,
+            100 # quality (100% confidence, 0-100)
+        )
+        print(f"Forwarding position (FRD) to MAVLink: {x:.2f}, {y:.2f}, {z:.2f}, q: {qw:.2f}, {qx:.2f}, {qy:.2f}, {qz:.2f}")
         last_update = now
 
 async def main():
@@ -46,7 +70,7 @@ async def main():
         position = [
             0,
             0,
-            -0.07 - 0.50
+            -0.07 - 0.30
         ]
         connection.mav.set_position_target_local_ned_send(
             0,
@@ -74,7 +98,7 @@ if __name__ == "__main__":
     vicon_pose_topic = os.environ["MAVLINK_POSE_TOPIC"] if "MAVLINK_POSE_TOPIC" in os.environ else None
     if vicon_pose_topic is not None:
         print(f"Subscribing to {vicon_pose_topic}")
-        vicon_listener = roslibpy.Topic(ros, vicon_pose_topic, 'geometry_msgs/PoseStamped')
+        vicon_listener = roslibpy.Topic(ros, vicon_pose_topic, 'nav_msgs/Odometry')
         vicon_listener.subscribe(vicon_callback)
     loop.create_task(main())
     reactor.run()

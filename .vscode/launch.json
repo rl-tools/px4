@@ -22,7 +22,7 @@
             "justMyCode": false,
             "cwd": "${workspaceFolder}/tools/external_position_reference",
             "env":{
-                "MAVLINK_POSE_TOPIC": "/vicon/race_jonas/pose",
+                "MAVLINK_POSE_TOPIC": "/vicon/race_jonas/odom",
                 "MAVLINK_URL": "udp:localhost:14551"
             }
         },
@@ -35,7 +35,7 @@
             "justMyCode": false,
             "cwd": "${workspaceFolder}/tools/external_position_reference",
             "env":{
-                "MAVLINK_POSE_TOPIC": "/vicon/x500_jonas/pose",
+                "MAVLINK_POSE_TOPIC": "/vicon/x500_jonas/odom",
                 "MAVLINK_URL": "udp:localhost:14551"
             }
         },
@@ -48,7 +48,7 @@
             "justMyCode": false,
             "cwd": "${workspaceFolder}/tools/external_position_reference",
             "env":{
-                "MAVLINK_POSE_TOPIC": "/vicon/soft/pose",
+                "MAVLINK_POSE_TOPIC": "/vicon/soft/odom",
                 "MAVLINK_URL": "udp:localhost:14551"
             }
         },

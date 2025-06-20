@@ -96,6 +96,15 @@ Turn off the Barometer height estimation when using a mocap system:
 EKF2_HGT_REF = "Vision"
 ```
 Because we send the position reference through the MAVLINK vision message
+
+Please also check the `EKF2_EV_NOISE_MD` noise mode (default: take from Mavlink message, use parameter as lower bound is fine). pymavlink by default sends NaN covariance (I believe) so we should also adjust the bounds/defaults (these values might not be optimal but they worked for me):
+```
+EKF2_EVP_NOISE=0.01
+EKF2_EVV_NOISE=0.10 (default)
+```
+Also enable "Track" in Vicon (less interference by IR reflective surfaces I believe)
+
+
 ```
 EKF2_BARO_CTRL = Disabled
 ```

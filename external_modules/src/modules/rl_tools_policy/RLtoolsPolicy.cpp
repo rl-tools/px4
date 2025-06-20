@@ -194,7 +194,7 @@ void RLtoolsPolicy::observe(RLtoolsInferenceApplicationsL2FObservation& observat
 		p[0] = +(_vehicle_local_position.x - _rl_tools_command.target_position[0]);
 		p[1] = -(_vehicle_local_position.y - _rl_tools_command.target_position[1]);
 		p[2] = -(_vehicle_local_position.z - _rl_tools_command.target_position[2]);
-		rotate_vector(Rt_inv, p, pt);
+		rotate_vector(Rt_inv, p, pt); // The position and velocity error are in the target frame
 		observation.position[0] = clip(pt[0], max_position_error, -max_position_error);
 		observation.position[1] = clip(pt[1], max_position_error, -max_position_error);
 		observation.position[2] = clip(pt[2], max_position_error, -max_position_error);
