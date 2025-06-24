@@ -19,7 +19,7 @@ RLtoolsPolicy::RLtoolsPolicy(): ModuleParams(nullptr), ScheduledWorkItem(MODULE_
 }
 void RLtoolsPolicy::reset(){
 	for(int action_i=0; action_i < RL_TOOLS_INTERFACE_APPLICATIONS_L2F_ACTION_DIM; action_i++){
-		this->previous_action[action_i] = -1;
+		this->previous_action[action_i] = RESET_PREVIOUS_ACTION_VALUE;
 	}
 	rl_tools_inference_applications_l2f_reset();
 }

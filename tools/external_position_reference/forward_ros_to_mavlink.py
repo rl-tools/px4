@@ -38,8 +38,6 @@ def vicon_callback(msg):
 
     vx, vy, vz = [msg["twist"]["twist"]["linear"][x] for x in ["x", "y", "z"]]
     vx, vy, vz =  vx, -vy, -vz
-    # Rwb = R.from_quat([q_mav[-1], q_mav[0], q_mav[1], q_mav[2]])
-    # vx_body, vy_body, vz_body = Rwb.apply([vx, vy, vz], inverse=True)
 
     pose_cov = np.full(21, np.nan,  dtype=np.float32)
     vel_cov  = np.full(21, np.nan,  dtype=np.float32)
@@ -63,14 +61,14 @@ def vicon_callback(msg):
             mavutil.mavlink.MAV_ESTIMATOR_TYPE_VISION,
             100 # quality (100% confidence, 0-100)
         )
-        print(f"Forwarding position (FRD) to MAVLink: {x:.2f}, {y:.2f}, {z:.2f}, q: {qw:.2f}, {qx:.2f}, {qy:.2f}, {qz:.2f}")
+        # print(f"Forwarding position (FRD) to MAVLink: {x:.2f}, {y:.2f}, {z:.2f}, q: {qw:.2f}, {qx:.2f}, {qy:.2f}, {qz:.2f}")
         last_update = now
 
 async def main():
     while True:
         position = [
             0,
-            0,
+            0.8,
             -0.07 - 0.20
         ]
         connection.mav.set_position_target_local_ned_send(

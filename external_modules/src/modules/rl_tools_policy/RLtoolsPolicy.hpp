@@ -63,6 +63,7 @@ private:
 	static constexpr TI OBSERVATION_TIMEOUT_POSITION = 100 * 1000;
 	static constexpr TI OBSERVATION_TIMEOUT_ATTITUDE = 50 * 1000;
 	static constexpr TI COMMAND_TIMEOUT = 100 * 1000;
+	static constexpr T RESET_PREVIOUS_ACTION_VALUE = 0; // -1 to 1
 
 	T min(T a, T b) {
 		return a < b ? a : b;
