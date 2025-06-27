@@ -112,7 +112,7 @@ private:
 	void reset();
 	void observe(RLtoolsInferenceApplicationsL2FObservation& observation, TestObservationMode mode);
 
-	static constexpr bool REMAP_FROM_CRAZYFLIE = true; // Policy (Crazyflie assignment) => Quadrotor (PX4 Quadrotor X assignment) PX4 SIH assumes the Quadrotor X configuration, which assumes different rotor positions than the crazyflie mapping (from crazyflie outputs to PX4): 1=>1, 2=>4, 3=>2, 4=>3 
+	static constexpr bool REMAP_FROM_CRAZYFLIE = false; // Policy (Crazyflie assignment) => Quadrotor (PX4 Quadrotor X assignment) PX4 SIH assumes the Quadrotor X configuration, which assumes different rotor positions than the crazyflie mapping (from crazyflie outputs to PX4): 1=>1, 2=>4, 3=>2, 4=>3 
 	// controller state
 
 	// messaging state

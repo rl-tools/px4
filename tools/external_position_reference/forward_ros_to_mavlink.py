@@ -19,14 +19,15 @@ import time
 
 
 
-last_update = None
-interval = 0.10
+last_mocap_callback = None
+mocap_callback_dts = []
+INTERVAL = 0.10
 
 POSITION_STD = 0.01 # m
 VELOCITY_STD = 0.01 # m/s
 ORIENTATION_STD = 5.0 # degrees
 def vicon_callback(msg):
-    global last_update
+    global last_mocap_callback, mocap_callback_dts
     secs  = msg["header"]["stamp"]["secs"]
     nsecs = msg["header"]["stamp"]["nsecs"]
     usec  = int(secs * 1e6 + nsecs / 1e3)
@@ -34,6 +35,7 @@ def vicon_callback(msg):
     x,  y,  z  =  [msg["pose"]["pose"]["position"][x] for x in ["x", "y", "z"]]
     x,  y,  z  =  x, -y, -z
     qw, qx, qy, qz = [msg["pose"]["pose"]["orientation"][x] for x in ["w", "x", "y", "z"]]
+    q = [qw, qx, qy, qz]
     q_mav = [qw,  qx, -qy, -qz]
 
     vx, vy, vz = [msg["twist"]["twist"]["linear"][x] for x in ["x", "y", "z"]]
@@ -45,7 +47,7 @@ def vicon_callback(msg):
     pose_cov[15] = pose_cov[18] = pose_cov[20] = (np.deg2rad(ORIENTATION_STD))**2
     vel_cov[0]  = vel_cov[6]  = vel_cov[11]  = VELOCITY_STD**2
     now = time.time()
-    if last_update is None or interval is None or now - last_update > interval:
+    if last_mocap_callback is None or INTERVAL is None or now - last_mocap_callback > INTERVAL:
         connection.mav.odometry_send(
             usec,
             mavutil.mavlink.MAV_FRAME_LOCAL_NED,    # pose frame
@@ -61,14 +63,20 @@ def vicon_callback(msg):
             mavutil.mavlink.MAV_ESTIMATOR_TYPE_VISION,
             100 # quality (100% confidence, 0-100)
         )
-        # print(f"Forwarding position (FRD) to MAVLink: {x:.2f}, {y:.2f}, {z:.2f}, q: {qw:.2f}, {qx:.2f}, {qy:.2f}, {qz:.2f}")
-        last_update = now
+        if last_mocap_callback is not None:
+            dt = now - last_mocap_callback
+            mocap_callback_dts.append(dt)
+            mocap_callback_dts = mocap_callback_dts[-100:]
+        last_mocap_callback = now
+        print(f"Forwarding position (FRD) to MAVLink: {x:.2f}, {y:.2f}, {z:.2f}, q: {qw:.2f}, {qx:.2f}, {qy:.2f}, {qz:.2f} {1/np.mean(mocap_callback_dts):.2f} Hz")
+
+        last_mocap_callback = now
 
 async def main():
     while True:
         position = [
             0,
-            0.8,
+            0,
             -0.07 - 0.20
         ]
         connection.mav.set_position_target_local_ned_send(
