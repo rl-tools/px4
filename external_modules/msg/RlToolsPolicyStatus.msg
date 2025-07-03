@@ -20,9 +20,14 @@ uint8 EXIT_REASON_VISUAL_ODOMETRY_NAN                = 7
 uint8 EXIT_REASON_ATTITUDE_STALE                     = 8
 uint8 EXIT_REASON_EXECUTOR_STATUS_SOURCE_NOT_CONTROL = 9
 
+uint8 ODOMETRY_SOURCE_LOCAL_POSITION = 0
+uint8 ODOMETRY_SOURCE_VISUAL_ODOMETRY = 1
+uint8 ODOMETRY_SOURCE_UNKNOWN = 2
+
 bool command_stale
 
 bool active
 uint8 substep
+uint8 odometry_source
 float32 control_interval
 
