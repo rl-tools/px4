@@ -62,7 +62,7 @@ private:
 	// node constants
 	static constexpr TI OBSERVATION_TIMEOUT_ANGULAR_VELOCITY = 10 * 1000;
 	static constexpr TI OBSERVATION_TIMEOUT_LOCAL_POSITION = 100 * 1000;
-	static constexpr TI OBSERVATION_TIMEOUT_VISUAL_ODOMETRY = 10 * 1000;
+	static constexpr TI OBSERVATION_TIMEOUT_VISUAL_ODOMETRY = 100 * 1000;
 	static constexpr TI OBSERVATION_TIMEOUT_ATTITUDE = 50 * 1000;
 	static constexpr TI COMMAND_TIMEOUT = 100 * 1000;
 	static constexpr T RESET_PREVIOUS_ACTION_VALUE = 0; // -1 to 1

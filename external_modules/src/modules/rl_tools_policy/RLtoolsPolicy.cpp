@@ -262,6 +262,18 @@ void RLtoolsPolicy::Run()
 	status.active = false;
 	status.control_interval = NAN;
 
+	if(RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::LOCAL_POSITION){
+		status.odometry_source = rl_tools_policy_status_s::ODOMETRY_SOURCE_LOCAL_POSITION;
+	}
+	else{
+		if(RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::VISUAL_ODOMETRY){
+			status.odometry_source = rl_tools_policy_status_s::ODOMETRY_SOURCE_VISUAL_ODOMETRY;
+		}
+		else{
+			status.odometry_source = rl_tools_policy_status_s::ODOMETRY_SOURCE_UNKNOWN;
+		}
+	}
+
 	bool angular_velocity_update = false;
 	if(_vehicle_angular_velocity_sub.update(&_vehicle_angular_velocity)){
 		timestamp_last_angular_velocity = current_time;
@@ -306,17 +318,6 @@ void RLtoolsPolicy::Run()
 		return;
 	}
 
-	if(RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::LOCAL_POSITION){
-		status.odometry_source = rl_tools_policy_status_s::ODOMETRY_SOURCE_LOCAL_POSITION;
-	}
-	else{
-		if(RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::VISUAL_ODOMETRY){
-			status.odometry_source = rl_tools_policy_status_s::ODOMETRY_SOURCE_VISUAL_ODOMETRY;
-		}
-		else{
-			status.odometry_source = rl_tools_policy_status_s::ODOMETRY_SOURCE_UNKNOWN;
-		}
-	}
 	bool timestamp_last_odometry_set = RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::LOCAL_POSITION && timestamp_last_local_position_set || RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::VISUAL_ODOMETRY && timestamp_last_visual_odometry_set;
 	if(!timestamp_last_angular_velocity_set || !timestamp_last_odometry_set || !timestamp_last_attitude_set){
 		status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_NOT_ALL_OBSERVATIONS_SET;
