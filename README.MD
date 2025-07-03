@@ -117,6 +117,11 @@ If using `rl_tools_commander set_mode OFFBOARD`:
 MAV_FWDEXTSP=Enabled
 ```
 
+Effect not really tested but set feed forward (by comparing the orientation in `vehicle_visual_odometry` and `vehicle_attitude`):
+```
+EKF2_EV_DELAY=50
+```
+
 Note to activate the policy using a dead man's switch the aux passthrough should be activated in QGC.
 
 ### Position Feedback

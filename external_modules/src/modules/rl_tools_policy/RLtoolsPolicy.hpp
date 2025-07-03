@@ -15,6 +15,7 @@
 #include <uORB/Subscription.hpp>
 #include <uORB/SubscriptionCallback.hpp>
 #include <uORB/topics/vehicle_local_position.h>
+#include <uORB/topics/vehicle_odometry.h>
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_angular_velocity.h>
 #include <uORB/topics/actuator_motors.h>
@@ -60,10 +61,17 @@ private:
 	hrt_abstime init_time;
 	// node constants
 	static constexpr TI OBSERVATION_TIMEOUT_ANGULAR_VELOCITY = 10 * 1000;
-	static constexpr TI OBSERVATION_TIMEOUT_POSITION = 100 * 1000;
+	static constexpr TI OBSERVATION_TIMEOUT_LOCAL_POSITION = 100 * 1000;
+	static constexpr TI OBSERVATION_TIMEOUT_VISUAL_ODOMETRY = 10 * 1000;
 	static constexpr TI OBSERVATION_TIMEOUT_ATTITUDE = 50 * 1000;
 	static constexpr TI COMMAND_TIMEOUT = 100 * 1000;
 	static constexpr T RESET_PREVIOUS_ACTION_VALUE = 0; // -1 to 1
+
+	enum class OdometrySource: TI{
+		LOCAL_POSITION = 0,
+		VISUAL_ODOMETRY = 1,
+	};
+	static constexpr OdometrySource ODOMETRY_SOURCE = OdometrySource::VISUAL_ODOMETRY;
 
 	T min(T a, T b) {
 		return a < b ? a : b;
@@ -77,18 +85,23 @@ private:
 
 	// node state
 	vehicle_local_position_s _vehicle_local_position{};
+	vehicle_odometry_s _vehicle_visual_odometry{};
 	vehicle_angular_velocity_s _vehicle_angular_velocity{};
 	vehicle_attitude_s _vehicle_attitude{};
 	rl_tools_command_s _rl_tools_command{};
-	hrt_abstime timestamp_last_local_position, timestamp_last_angular_velocity, timestamp_last_attitude, timestamp_last_command, timestamp_last_manual_control_input;
-	bool timestamp_last_local_position_set = false, timestamp_last_angular_velocity_set = false, timestamp_last_attitude_set = false, timestamp_last_command_set = false, timestamp_last_manual_control_input_set = false;
+	hrt_abstime timestamp_last_local_position, timestamp_last_visual_odometry, timestamp_last_angular_velocity, timestamp_last_attitude, timestamp_last_command, timestamp_last_manual_control_input;
+	bool timestamp_last_local_position_set = false, timestamp_last_visual_odometry_set = false, timestamp_last_angular_velocity_set = false, timestamp_last_attitude_set = false, timestamp_last_command_set = false, timestamp_last_manual_control_input_set = false;
 	bool timeout_message_sent = false;
 	bool previous_command_stale = false;
 	bool previous_active = false;
 
+
+	T position[3];
+	T linear_velocity[3];
 	
 	uORB::Subscription _rl_tools_command_sub{ORB_ID(rl_tools_command)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_local_position_sub{this, ORB_ID(vehicle_local_position)};
+	uORB::SubscriptionCallbackWorkItem _vehicle_visual_odometry_sub{this, ORB_ID(vehicle_visual_odometry)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_angular_velocity_sub{this, ORB_ID(vehicle_angular_velocity)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_sub{this, ORB_ID(vehicle_attitude)};
 	uORB::Publication<actuator_motors_s> _actuator_motors_rl_tools_pub{ORB_ID(actuator_motors_rl_tools)};
@@ -112,7 +125,7 @@ private:
 	void reset();
 	void observe(RLtoolsInferenceApplicationsL2FObservation& observation, TestObservationMode mode);
 
-	static constexpr bool REMAP_FROM_CRAZYFLIE = false; // Policy (Crazyflie assignment) => Quadrotor (PX4 Quadrotor X assignment) PX4 SIH assumes the Quadrotor X configuration, which assumes different rotor positions than the crazyflie mapping (from crazyflie outputs to PX4): 1=>1, 2=>4, 3=>2, 4=>3 
+	static constexpr bool REMAP_FROM_CRAZYFLIE = true; // Policy (Crazyflie assignment) => Quadrotor (PX4 Quadrotor X assignment) PX4 SIH assumes the Quadrotor X configuration, which assumes different rotor positions than the crazyflie mapping (from crazyflie outputs to PX4): 1=>1, 2=>4, 3=>2, 4=>3 
 	// controller state
 
 	// messaging state

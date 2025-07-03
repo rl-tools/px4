@@ -38,6 +38,10 @@ bool RLtoolsPolicy::init()
 		PX4_ERR("vehicle_local_position_sub callback registration failed");
 		return false;
 	}
+	if (!_vehicle_visual_odometry_sub.registerCallback()) {
+		PX4_ERR("vehicle_visual_odometry_sub callback registration failed");
+		return false;
+	}
 	if (!_vehicle_angular_velocity_sub.registerCallback()) {
 		PX4_ERR("vehicle_angular_velocity_sub callback registration failed");
 		return false;
@@ -191,9 +195,9 @@ void RLtoolsPolicy::observe(RLtoolsInferenceApplicationsL2FObservation& observat
 	}
 	if(mode >= TestObservationMode::POSITION){
 		T p[3], pt[3]; // FLU
-		p[0] = +(_vehicle_local_position.x - _rl_tools_command.target_position[0]);
-		p[1] = -(_vehicle_local_position.y - _rl_tools_command.target_position[1]);
-		p[2] = -(_vehicle_local_position.z - _rl_tools_command.target_position[2]);
+		p[0] = +(position[0] - _rl_tools_command.target_position[0]);
+		p[1] = -(position[1] - _rl_tools_command.target_position[1]);
+		p[2] = -(position[2] - _rl_tools_command.target_position[2]);
 		rotate_vector(Rt_inv, p, pt); // The position and velocity error are in the target frame
 		observation.position[0] = clip(pt[0], max_position_error, -max_position_error);
 		observation.position[1] = clip(pt[1], max_position_error, -max_position_error);
@@ -206,9 +210,9 @@ void RLtoolsPolicy::observe(RLtoolsInferenceApplicationsL2FObservation& observat
 	}
 	if(mode >= TestObservationMode::LINEAR_VELOCITY){
 		T v[3], vt[3];
-		v[0] = +(_vehicle_local_position.vx - _rl_tools_command.target_linear_velocity[0]);
-		v[1] = -(_vehicle_local_position.vy - _rl_tools_command.target_linear_velocity[1]);
-		v[2] = -(_vehicle_local_position.vz - _rl_tools_command.target_linear_velocity[2]);
+		v[0] = +(linear_velocity[0] - _rl_tools_command.target_linear_velocity[0]);
+		v[1] = -(linear_velocity[1] - _rl_tools_command.target_linear_velocity[1]);
+		v[2] = -(linear_velocity[2] - _rl_tools_command.target_linear_velocity[2]);
 		rotate_vector(Rt_inv, v, vt);
 		observation.linear_velocity[0] = clip(vt[0], max_velocity_error, -max_velocity_error);
 		observation.linear_velocity[1] = clip(vt[1], max_velocity_error, -max_velocity_error);
@@ -271,6 +275,11 @@ void RLtoolsPolicy::Run()
 		timestamp_last_local_position_set = true;
 		status.subscription_update |= rl_tools_policy_status_s::SUBSCRIPTION_UPDATE_LOCAL_POSITION;
 	}
+	if(_vehicle_visual_odometry_sub.update(&_vehicle_visual_odometry)){
+		timestamp_last_visual_odometry = current_time;
+		timestamp_last_visual_odometry_set = true;
+		status.subscription_update |= rl_tools_policy_status_s::SUBSCRIPTION_UPDATE_VISUAL_ODOMETRY;
+	}
 	if(_vehicle_attitude_sub.update(&_vehicle_attitude)){
 		timestamp_last_attitude = current_time;
 		timestamp_last_attitude_set = true;
@@ -297,7 +306,8 @@ void RLtoolsPolicy::Run()
 		return;
 	}
 
-	if(!timestamp_last_angular_velocity_set || !timestamp_last_local_position_set || !timestamp_last_attitude_set){
+	bool timestamp_last_odometry_set = RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::LOCAL_POSITION && timestamp_last_local_position_set || RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::VISUAL_ODOMETRY && timestamp_last_visual_odometry_set;
+	if(!timestamp_last_angular_velocity_set || !timestamp_last_odometry_set || !timestamp_last_attitude_set){
 		status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_NOT_ALL_OBSERVATIONS_SET;
 		if constexpr(PUBLISH_NON_COMPLETE_STATUS){
 			_rl_tools_policy_status_pub.publish(status);
@@ -316,17 +326,80 @@ void RLtoolsPolicy::Run()
 		}
 		return;
 	}
-	if((current_time - timestamp_last_local_position) > OBSERVATION_TIMEOUT_POSITION){
-		status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_LOCAL_POSITION_STALE;
-		if constexpr(PUBLISH_NON_COMPLETE_STATUS){
-			_rl_tools_policy_status_pub.publish(status);
+	if(RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::LOCAL_POSITION){
+		if((current_time - timestamp_last_local_position) > OBSERVATION_TIMEOUT_LOCAL_POSITION){
+			status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_LOCAL_POSITION_STALE;
+			if constexpr(PUBLISH_NON_COMPLETE_STATUS){
+				_rl_tools_policy_status_pub.publish(status);
+			}
+			if(!timeout_message_sent){
+				PX4_ERR("local position timeout");
+				timeout_message_sent = true;
+			}
+			return;
 		}
-		if(!timeout_message_sent){
-			PX4_ERR("local position timeout");
-			timeout_message_sent = true;
+		else{
+			position[0] = _vehicle_local_position.x;
+			position[1] = _vehicle_local_position.y;
+			position[2] = _vehicle_local_position.z;
+			linear_velocity[0] = _vehicle_local_position.vx;
+			linear_velocity[1] = _vehicle_local_position.vy;
+			linear_velocity[2] = _vehicle_local_position.vz;
 		}
-		return;
 	}
+	else{
+		if(RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::VISUAL_ODOMETRY){
+			if((current_time - timestamp_last_visual_odometry) > OBSERVATION_TIMEOUT_VISUAL_ODOMETRY){
+				status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_VISUAL_ODOMETRY_STALE;
+				if constexpr(PUBLISH_NON_COMPLETE_STATUS){
+					_rl_tools_policy_status_pub.publish(status);
+				}
+				if(!timeout_message_sent){
+					PX4_ERR("Visual odometry timeout");
+					timeout_message_sent = true;
+				}
+				return;
+			}
+			else{
+				if(_vehicle_visual_odometry.pose_frame != vehicle_odometry_s::POSE_FRAME_NED){
+					status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_VISUAL_ODOMETRY_WRONG_FRAME;
+					if constexpr(PUBLISH_NON_COMPLETE_STATUS){
+						_rl_tools_policy_status_pub.publish(status);
+					}
+					if(!timeout_message_sent){
+						PX4_ERR("Visual odometry wrong frame (should be NED)");
+						timeout_message_sent = true;
+					}
+					return;
+				}
+				else{
+					bool position_nan = std::isnan(_vehicle_visual_odometry.position[0]) || std::isnan(_vehicle_visual_odometry.position[1]) || std::isnan(_vehicle_visual_odometry.position[2]);
+					bool velocity_nan = std::isnan(_vehicle_visual_odometry.velocity[0]) || std::isnan(_vehicle_visual_odometry.velocity[1]) || std::isnan(_vehicle_visual_odometry.velocity[2]);
+					if(position_nan || velocity_nan){
+						status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_VISUAL_ODOMETRY_NAN;
+						if constexpr(PUBLISH_NON_COMPLETE_STATUS){
+							_rl_tools_policy_status_pub.publish(status);
+						}
+						if(!timeout_message_sent){
+							PX4_ERR("Visual odometry contains NANs in position or velocity");
+							timeout_message_sent = true;
+						}
+						return;
+					}
+					else{
+						position[0] = _vehicle_visual_odometry.position[0];
+						position[1] = _vehicle_visual_odometry.position[1];
+						position[2] = _vehicle_visual_odometry.position[2];
+						linear_velocity[0] = _vehicle_visual_odometry.velocity[0];
+						linear_velocity[1] = _vehicle_visual_odometry.velocity[1];
+						linear_velocity[2] = _vehicle_visual_odometry.velocity[2];
+					}
+				}
+			}
+		}
+	}
+	// position and linear_velocity are guaranteed to be set after this point
+
 	if((current_time - timestamp_last_attitude) > OBSERVATION_TIMEOUT_ATTITUDE){
 		status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_ATTITUDE_STALE;
 		if constexpr(PUBLISH_NON_COMPLETE_STATUS){
@@ -343,10 +416,13 @@ void RLtoolsPolicy::Run()
 	if(!timestamp_last_command_set || (current_time - timestamp_last_command) > COMMAND_TIMEOUT){
 		status.command_stale = true;
 		if(!previous_command_stale){
-			PX4_WARN("Command turned stale at: %f %f %f", _vehicle_local_position.x, _vehicle_local_position.y, _vehicle_local_position.z);
-			_rl_tools_command.target_position[0] = _vehicle_local_position.x;
-			_rl_tools_command.target_position[1] = _vehicle_local_position.y;
-			_rl_tools_command.target_position[2] = _vehicle_local_position.z;
+			PX4_WARN("Command turned stale at: %f %f %f", position[0], position[1], position[2]);
+			_rl_tools_command.target_position[0] = position[0];
+			_rl_tools_command.target_position[1] = position[1];
+			_rl_tools_command.target_position[2] = position[2];
+			_rl_tools_command.target_linear_velocity[0] = 0;
+			_rl_tools_command.target_linear_velocity[1] = 0;
+			_rl_tools_command.target_linear_velocity[2] = 0;
 		}
 		previous_command_stale = true;
 	}

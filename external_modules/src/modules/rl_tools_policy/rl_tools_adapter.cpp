@@ -22,7 +22,7 @@ struct RL_TOOLS_INFERENCE_APPLICATIONS_L2F_CONFIG{
     using DEVICE = other::DEVICE;
     using TI = typename other::DEVICE::index_t;
     using RNG = other::DEVICE::SPEC::RANDOM::ENGINE<>;
-    static constexpr TI TEST_SEQUENCE_LENGTH_ACTUAL = 1;
+    static constexpr TI TEST_SEQUENCE_LENGTH_ACTUAL = 5;
     static constexpr TI TEST_BATCH_SIZE_ACTUAL = 2;
     using ACTOR_TYPE_ORIGINAL = rlt::checkpoint::actor::TYPE;
     using POLICY_TEST = rlt::checkpoint::actor::TYPE::template CHANGE_BATCH_SIZE<TI, 1>::template CHANGE_SEQUENCE_LENGTH<TI, 1>;
@@ -31,7 +31,7 @@ struct RL_TOOLS_INFERENCE_APPLICATIONS_L2F_CONFIG{
     static auto& policy() {
         return rlt::checkpoint::actor::module;
     }
-    static constexpr TI ACTION_HISTORY_LENGTH = 8;
+    static constexpr TI ACTION_HISTORY_LENGTH = 1;
     static constexpr TI CONTROL_INTERVAL_INTERMEDIATE_NS = 2.5 * 1000 * 1000; // Inference is at 500hz
     static constexpr TI CONTROL_INTERVAL_NATIVE_NS = 10 * 1000 * 1000; // Training is 100hz
     static constexpr TI TIMING_STATS_NUM_STEPS = 100;
