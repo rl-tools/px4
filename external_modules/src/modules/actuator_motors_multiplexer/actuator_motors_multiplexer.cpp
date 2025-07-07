@@ -96,7 +96,6 @@ void ActuatorMotorsMultiplexer::Run()
 	constexpr hrt_abstime ACTIVATION_TRIGGER_TIMEOUT = 30*1000; // 200ms timeout
 	next_use_original_controller = next_use_original_controller || !last_rl_tools_output_time_set || !last_trigger_time_set;
 	if(last_trigger_time_set && ((current_time - last_trigger_time) > ACTIVATION_TRIGGER_TIMEOUT)){
-		PX4_WARN("Activation timeout");
 		next_use_original_controller = true;
 		if(MODE != Mode::SWITCH_BACK){
 			deactivated = true;

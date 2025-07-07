@@ -1,12 +1,11 @@
 # TOPICS rl_tools_policy_status
 uint64 timestamp
 uint64 timestamp_sample
-uint8 subscription_update
-uint8 SUBSCRIPTION_UPDATE_ANGULAR_VELOCITY = 1
-uint8 SUBSCRIPTION_UPDATE_LOCAL_POSITION   = 2
-uint8 SUBSCRIPTION_UPDATE_VISUAL_ODOMETRY  = 4
-uint8 SUBSCRIPTION_UPDATE_ATTITUDE         = 8
-uint8 SUBSCRIPTION_UPDATE_RL_TOOLS_COMMAND = 16
+bool subscription_update_angular_velocity
+bool subscription_update_local_position
+bool subscription_update_visual_odometry
+bool subscription_update_attitude
+bool subscription_update_rl_tools_command
 
 uint8 exit_reason 
 uint8 EXIT_REASON_NONE                               = 0
@@ -31,3 +30,5 @@ uint8 substep
 uint8 odometry_source
 float32 control_interval
 
+uint32 visual_odometry_stale_counter
+uint64 visual_odometry_age

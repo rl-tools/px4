@@ -22,6 +22,7 @@
 #include <uORB/topics/rl_tools_command.h>
 #include <uORB/topics/rl_tools_policy_status.h>
 #include <uORB/topics/rl_tools_policy_input.h>
+#include <uORB/topics/tune_control.h>
 
 
 
@@ -89,11 +90,13 @@ private:
 	vehicle_angular_velocity_s _vehicle_angular_velocity{};
 	vehicle_attitude_s _vehicle_attitude{};
 	rl_tools_command_s _rl_tools_command{};
-	hrt_abstime timestamp_last_local_position, timestamp_last_visual_odometry, timestamp_last_angular_velocity, timestamp_last_attitude, timestamp_last_command, timestamp_last_manual_control_input;
-	bool timestamp_last_local_position_set = false, timestamp_last_visual_odometry_set = false, timestamp_last_angular_velocity_set = false, timestamp_last_attitude_set = false, timestamp_last_command_set = false, timestamp_last_manual_control_input_set = false;
+	hrt_abstime timestamp_last_local_position, timestamp_last_visual_odometry, timestamp_last_visual_odometry_stale, timestamp_last_angular_velocity, timestamp_last_attitude, timestamp_last_command, timestamp_last_manual_control_input;
+	bool timestamp_last_local_position_set = false, timestamp_last_visual_odometry_set = false, timestamp_last_visual_odometry_stale_set = false, timestamp_last_angular_velocity_set = false, timestamp_last_attitude_set = false, timestamp_last_command_set = false, timestamp_last_manual_control_input_set = false;
 	bool timeout_message_sent = false;
 	bool previous_command_stale = false;
 	bool previous_active = false;
+
+	TI visual_odometry_stale_counter = 0;
 
 
 	T position[3];
@@ -107,6 +110,7 @@ private:
 	uORB::Publication<actuator_motors_s> _actuator_motors_rl_tools_pub{ORB_ID(actuator_motors_rl_tools)};
 	uORB::Publication<rl_tools_policy_status_s> _rl_tools_policy_status_pub{ORB_ID(rl_tools_policy_status)};
 	uORB::Publication<rl_tools_policy_input_s> _rl_tools_policy_input_pub{ORB_ID(rl_tools_policy_input)};
+	uORB::Publication<tune_control_s> _tune_control_pub{ORB_ID(tune_control)};
 
 	// Performance (perf) counters
 	perf_counter_t	_loop_perf{perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")};
