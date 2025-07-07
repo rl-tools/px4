@@ -72,8 +72,8 @@ private:
 		LOCAL_POSITION = 0,
 		VISUAL_ODOMETRY = 1,
 	};
-	static constexpr OdometrySource ODOMETRY_SOURCE = OdometrySource::VISUAL_ODOMETRY;
-	// static constexpr OdometrySource ODOMETRY_SOURCE = OdometrySource::LOCAL_POSITION;
+	// static constexpr OdometrySource ODOMETRY_SOURCE = OdometrySource::VISUAL_ODOMETRY;
+	static constexpr OdometrySource ODOMETRY_SOURCE = OdometrySource::LOCAL_POSITION;
 
 	T min(T a, T b) {
 		return a < b ? a : b;

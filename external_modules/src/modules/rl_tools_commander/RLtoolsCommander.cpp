@@ -61,12 +61,22 @@ void RLtoolsCommander::FigureEight::update(hrt_abstime now){
 		speed = target_speed * t/warmup_time;
 	}
 	progress += dt * speed;
+	float d_progress = speed;
 	float pi = M_PI;
-	position[0] = cosf(progress*2.0f*pi + pi / 2.0f) * scale;
-	linear_velocity[0] = -sinf(progress*2*pi + pi / 2) * scale * 2 * pi * speed;
-	position[1] = sinf(2*(progress*2*pi + pi / 2)) / 2.0f * scale;
-	linear_velocity[1] = cosf(2*(progress*2*pi + pi / 2)) / 2.0f * scale * 4 * pi * speed;
+
+	float A = 1;
+	float B = 0.5;
+	float a = 0.5;
+	float b = 1;
+	float delta = 0.5;
+	float phase = 1;
+	float progress = t * 2 * pi / duration
+	float d_progress = 2 * pi / duration
+	position[0] = scale * A * Math.sin(a * (phase*pi + progress) + delta*pi)
+	position[1] = scale * B * Math.sin(b * (phase*pi + progress))
 	position[2] = 0;
+	linear_velocity[0] = scale * A * Math.cos(a * (phase*pi + progress) + delta*pi) * a * d_progress
+	linear_velocity[1] = scale * B * Math.cos(b * (phase*pi + progress)) * b * d_progress
 	linear_velocity[2] = 0;
 	last_update_time = now;
 }
