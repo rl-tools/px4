@@ -32,3 +32,7 @@ float32 control_interval
 
 uint32 visual_odometry_stale_counter
 uint64 visual_odometry_age
+float32 visual_odometry_dt_mean
+float32 visual_odometry_dt_std
+uint8 NUM_VISUAL_ODOMETRY_DT_MAX = 3
+float32[3] visual_odometry_dt_max

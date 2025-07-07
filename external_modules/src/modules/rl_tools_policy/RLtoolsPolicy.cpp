@@ -265,6 +265,11 @@ void RLtoolsPolicy::Run()
 	status.control_interval = NAN;
 	status.visual_odometry_stale_counter = this->visual_odometry_stale_counter;
 	status.visual_odometry_age = 0;
+	status.visual_odometry_dt_mean = 0;
+	status.visual_odometry_dt_std = 0;
+	for(TI odometry_dt_i = 0; odometry_dt_i < rl_tools_policy_status_s::NUM_VISUAL_ODOMETRY_DT_MAX; odometry_dt_i++){
+		status.visual_odometry_dt_max[odometry_dt_i] = 0;
+	}
 
 	if(RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::LOCAL_POSITION){
 		status.odometry_source = rl_tools_policy_status_s::ODOMETRY_SOURCE_LOCAL_POSITION;
@@ -290,9 +295,35 @@ void RLtoolsPolicy::Run()
 		timestamp_last_local_position_set = true;
 	}
 	if(status.subscription_update_visual_odometry = _vehicle_visual_odometry_sub.update(&_vehicle_visual_odometry)){
+		if(timestamp_last_visual_odometry_set){
+			odometry_dts[odometry_dt_index] = current_time - timestamp_last_visual_odometry;
+			odometry_dt_index = (odometry_dt_index + 1) % NUM_ODOMETRY_DTS;
+			if(odometry_dt_index == 0){
+				odometry_dts_full = true;
+			}
+		}
 		timestamp_last_visual_odometry = current_time;
 		timestamp_last_visual_odometry_set = true;
 	}
+	for(TI odometry_dt_i = 0; odometry_dt_i < (odometry_dts_full ? NUM_ODOMETRY_DTS : odometry_dt_index); odometry_dt_i++){
+		auto value = odometry_dts[odometry_dt_i];
+		status.visual_odometry_dt_mean += value;
+		status.visual_odometry_dt_std += value * value;
+		TI max_index = 0;
+		bool max_index_set = false;
+		for(TI odometry_dt_max_i = 0; odometry_dt_max_i < rl_tools_policy_status_s::NUM_VISUAL_ODOMETRY_DT_MAX; odometry_dt_max_i++){
+			if(value > status.visual_odometry_dt_max[odometry_dt_max_i]){
+				max_index = odometry_dt_max_i;
+				max_index_set = true;
+			}
+		}
+		if(max_index_set){
+			status.visual_odometry_dt_max[max_index] = value;
+		}
+	}
+	status.visual_odometry_dt_mean /= NUM_ODOMETRY_DTS;
+	status.visual_odometry_dt_std = sqrt(status.visual_odometry_dt_std / NUM_ODOMETRY_DTS - status.visual_odometry_dt_mean * status.visual_odometry_dt_mean);
+
 	if(status.subscription_update_attitude = _vehicle_attitude_sub.update(&_vehicle_attitude)){
 		timestamp_last_attitude = current_time;
 		timestamp_last_attitude_set = true;

@@ -97,6 +97,10 @@ private:
 	bool previous_command_stale = false;
 	bool previous_active = false;
 
+	static constexpr TI NUM_ODOMETRY_DTS = 1000;
+	TI odometry_dts[NUM_ODOMETRY_DTS];
+	TI odometry_dt_index = 0;
+	bool odometry_dts_full = false;
 	TI visual_odometry_stale_counter = 0;
 
 
