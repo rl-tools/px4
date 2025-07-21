@@ -389,27 +389,26 @@ void RLtoolsPolicy::Run()
 			linear_velocity[2] = _vehicle_local_position.vz;
 		}
 	}
-	else{
-		if(RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::VISUAL_ODOMETRY){
-			status.visual_odometry_age = current_time - timestamp_last_visual_odometry;
-			if((current_time - timestamp_last_visual_odometry) > OBSERVATION_TIMEOUT_VISUAL_ODOMETRY){
-				if(!timestamp_last_visual_odometry_stale_set || timestamp_last_visual_odometry_stale != timestamp_last_visual_odometry){
-					// rising edge
-					visual_odometry_stale_counter++;
-					tune_control_s tune_control;
-					tune_control.timestamp = current_time;
-					tune_control.tune_id = 0;
-					tune_control.volume = 100; //tune_control_s::VOLUME_LEVEL_DEFAULT;
-					tune_control.tune_override = true;
-					tune_control.frequency = 1000;
-					tune_control.duration = 10000;
-					_tune_control_pub.publish(tune_control);
-					PX4_WARN("VISUAL ODOMETRY STALE: Begin");
-				}
-				timestamp_last_visual_odometry_stale = timestamp_last_visual_odometry;
-				timestamp_last_visual_odometry_stale_set = true;
+	{
+		status.visual_odometry_age = current_time - timestamp_last_visual_odometry;
+		if((current_time - timestamp_last_visual_odometry) > OBSERVATION_TIMEOUT_VISUAL_ODOMETRY){
+			if(!timestamp_last_visual_odometry_stale_set || timestamp_last_visual_odometry_stale != timestamp_last_visual_odometry){
+				// rising edge
+				visual_odometry_stale_counter++;
+				tune_control_s tune_control;
+				tune_control.timestamp = current_time;
+				tune_control.tune_id = 0;
+				tune_control.volume = 100; //tune_control_s::VOLUME_LEVEL_DEFAULT;
+				tune_control.tune_override = true;
+				tune_control.frequency = 1000;
+				tune_control.duration = 10000;
+				_tune_control_pub.publish(tune_control);
+				PX4_WARN("VISUAL ODOMETRY STALE: Begin");
+			}
+			timestamp_last_visual_odometry_stale = timestamp_last_visual_odometry;
+			timestamp_last_visual_odometry_stale_set = true;
+			if(RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::VISUAL_ODOMETRY){
 				status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_VISUAL_ODOMETRY_STALE;
-
 				if constexpr(PUBLISH_NON_COMPLETE_STATUS){
 					_rl_tools_policy_status_pub.publish(status);
 				}
@@ -419,21 +418,23 @@ void RLtoolsPolicy::Run()
 				}
 				return;
 			}
-			else{
-				if(timestamp_last_visual_odometry_stale_set){
-					// falling edge
-					auto diff = current_time - timestamp_last_visual_odometry_stale;
-					tune_control_s tune_control;
-					tune_control.timestamp = current_time;
-					tune_control.tune_id = 0;
-					tune_control.volume = 100; //tune_control_s::VOLUME_LEVEL_DEFAULT;
-					tune_control.tune_override = true;
-					tune_control.frequency = 2000;
-					tune_control.duration = min(10000000, diff);
-					_tune_control_pub.publish(tune_control);
-					PX4_WARN("VISUAL ODOMETRY STALE: End %llu uS", diff);
-				}
-				timestamp_last_visual_odometry_stale_set = false;
+		}
+		else{
+			if(timestamp_last_visual_odometry_stale_set){
+				// falling edge
+				auto diff = current_time - timestamp_last_visual_odometry_stale;
+				tune_control_s tune_control;
+				tune_control.timestamp = current_time;
+				tune_control.tune_id = 0;
+				tune_control.volume = 100; //tune_control_s::VOLUME_LEVEL_DEFAULT;
+				tune_control.tune_override = true;
+				tune_control.frequency = 2000;
+				tune_control.duration = min(10000000, diff);
+				_tune_control_pub.publish(tune_control);
+				PX4_WARN("VISUAL ODOMETRY STALE: End %llu uS", diff);
+			}
+			timestamp_last_visual_odometry_stale_set = false;
+			if(RLtoolsPolicy::ODOMETRY_SOURCE == RLtoolsPolicy::OdometrySource::VISUAL_ODOMETRY){
 				if(_vehicle_visual_odometry.pose_frame != vehicle_odometry_s::POSE_FRAME_NED){
 					status.exit_reason = rl_tools_policy_status_s::EXIT_REASON_VISUAL_ODOMETRY_WRONG_FRAME;
 					if constexpr(PUBLISH_NON_COMPLETE_STATUS){
