@@ -249,3 +249,12 @@ Note that the Pixracer pro does not properly support 1.15 due to the [compass no
 ```
 mavproxy.py   --master=udp:127.0.0.1:14540   --out=udp:127.0.0.1:14550   --out=udp:127.0.0.1:14551
 ```
+
+
+### Running with multirobot orchestration
+```
+mavproxy.py --master=udp:127.0.0.1:14550 --out=udp:127.0.0.1:14551 --out=udp:127.0.0.1:14552
+```
+Connect QGroundControl to 14551 (manual connection)
+The "gazebo" model in the multirobot registry should already point towards `14552`
+Use game controller to arm and enable policy (configure the corresponding `RLtoolsCommander` parameters). The game controller input is forwarded from QGroundControl
